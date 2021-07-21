@@ -19,6 +19,11 @@ apply2 : expr1 /NEWLINE (expr|apply2)
       | DECIMAL
       | STRING
       | ID
+      | paren | bracket | brace
       | apply0
 
 apply0 : term term
+
+paren : /LPAREN expr /RPAREN
+bracket : /LBRACKET expr /RBRACKET
+brace : /LCURLY expr /RCURLY

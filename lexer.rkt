@@ -38,6 +38,12 @@
    [(eof) 
     (cond [(> current-level 0) (token-DEDENT lexeme)])]
    [#\space (token 'SPACE lexeme)]
+   ["(" (token 'LPAREN lexeme)]
+   [")" (token 'RPAREN lexeme)]
+   ["[" (token 'LBRACKET lexeme)]
+   ["]" (token 'RBRACKET lexeme)]
+   ["{" (token 'LCURLY lexeme)]
+   ["}" (token 'RCURLY lexeme)]
    [(:seq alphabetic (:* (:or alphabetic numeric)))
     (token 'ID (string->symbol lexeme))]
    [(:seq digits "." digits) (token 'DECIMAL (string->number lexeme))]
