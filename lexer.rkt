@@ -40,10 +40,8 @@
    [#\space (token 'SPACE lexeme)]
    [(:seq alphabetic (:* (:or alphabetic numeric)))
     (token 'ID (string->symbol lexeme))]
+   [(:seq digits "." digits) (token 'DECIMAL (string->number lexeme))]
    [digits (token 'INTEGER (string->number lexeme))]
-   [(:or (:seq (:? digits) "." digits)
-         (:seq digits "."))
-    (token 'DECIMAL (string->number lexeme))]
    [(:or (from/to "\"" "\"") (from/to "'" "'"))
     (token 'STRING
            (substring lexeme
