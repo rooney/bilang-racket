@@ -25,7 +25,7 @@ apply2 : expr1 /INDENT expr3 /DEDENT
 apply1 : expr0 /SPACE expr1
 apply0 : expr0 expr0
 
-prop : expr0 /DOT ID
+prop : expr0? /DOT ID
 
 bracket : /LBRACKET expr3 /RBRACKET
 group : /LPAREN expr3 /RPAREN
