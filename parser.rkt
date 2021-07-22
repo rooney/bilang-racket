@@ -1,31 +1,31 @@
 #lang brag
 
-return : /NEWLINE? expr
+return : /NEWLINE? expr3
 
-@expr : expr1 /NEWLINE?
-      | apply2
+@expr3 : apply3
+       | expr2 /NEWLINE?
 
-@expr1 : term 
-       | apply
-       | apply1
+@expr2 : apply2
+       | expr1
 
-apply : term /SPACE (expr|apply)
+@expr1 : apply1
+       | expr0 
 
-apply1 : expr /INDENT expr /DEDENT
+@expr0 : apply0
+       | INTEGER
+       | DECIMAL
+       | STRING
+       | ID
+       | bracket | group | thunk
 
-apply2 : expr1 /NEWLINE (expr|apply2)
+apply3 : expr2 /NEWLINE expr3
+apply2 : expr1 /INDENT expr3 /DEDENT
+apply1 : expr0 /SPACE expr1
+apply0 : expr0 expr0
 
-@term : INTEGER
-      | DECIMAL
-      | STRING
-      | ID
-      | paren | bracket | brace
-      | apply0
+bracket : /LBRACKET expr3 /RBRACKET
+group : /LPAREN expr3 /RPAREN
+      | /BACKSLASH /INDENT expr3 /DEDENT
+thunk : /LCURLY expr3 /RCURLY 
+      | /INDENT expr3 /DEDENT
 
-apply0 : term term
-
-paren : /LPAREN expr /RPAREN
-      | /BACKSLASH /INDENT expr /DEDENT
-bracket : /LBRACKET expr /RBRACKET
-brace : /LCURLY expr /RCURLY 
-      | /INDENT expr /DEDENT
