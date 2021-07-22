@@ -1,8 +1,8 @@
 #lang brag
 
-return : /NEWLINE? expr /NEWLINE?
+return : /NEWLINE? expr
 
-@expr : expr1
+@expr : expr1 /NEWLINE?
       | apply2
 
 @expr1 : term 
@@ -25,5 +25,7 @@ apply2 : expr1 /NEWLINE (expr|apply2)
 apply0 : term term
 
 paren : /LPAREN expr /RPAREN
+      | /BACKSLASH /INDENT expr /DEDENT
 bracket : /LBRACKET expr /RBRACKET
-brace : /LCURLY expr /RCURLY
+brace : /LCURLY expr /RCURLY 
+      | /INDENT expr /DEDENT

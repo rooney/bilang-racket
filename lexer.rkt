@@ -44,6 +44,7 @@
    ["]" (token 'RBRACKET lexeme)]
    ["{" (token 'LCURLY lexeme)]
    ["}" (token 'RCURLY lexeme)]
+   ["\\" (token 'BACKSLASH lexeme)]
    [(:seq alphabetic (:* (:or alphabetic numeric)))
     (token 'ID (string->symbol lexeme))]
    [(:seq digits "." digits) (token 'DECIMAL (string->number lexeme))]
