@@ -3,7 +3,7 @@
 return : /NEWLINE? expr3
 
 @expr3 : apply3
-       | expr2 /NEWLINE?
+       | expr2 (/NEWLINE | /INDENT /DEDENT)?
 
 @expr2 : apply2
        | expr1
