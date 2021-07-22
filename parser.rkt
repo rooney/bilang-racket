@@ -16,6 +16,7 @@ return : /NEWLINE? expr3
        | DECIMAL
        | STRING
        | ID
+       | OP
        | bracket | group | thunk
 
 apply3 : expr2 /NEWLINE expr3
