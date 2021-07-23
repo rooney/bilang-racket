@@ -46,7 +46,7 @@
    ["}" (token 'RCURLY lexeme)]
    ["\\" (token 'BACKSLASH lexeme)]
    ["." (token 'DOT lexeme)]
-   [(char-set "+-*/=><") (token 'OP (string->symbol lexeme))]
+   [(:+ (char-set "+-*/=><")) (token 'OP (string->symbol lexeme))]
    [(:seq alphabetic (:* (:or alphabetic numeric)))
     (token 'ID (string->symbol lexeme))]
    [(:seq digits "." digits) (token 'DECIMAL (string->number lexeme))]
