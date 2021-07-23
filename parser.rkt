@@ -16,7 +16,8 @@ return : /NEWLINE? expr3
        | DECIMAL
        | STRING
        | ID
-       | OP
+       | resolve
+       | op
        | prop
        | bracket | group | thunk
 
@@ -25,7 +26,9 @@ apply2 : expr1 /INDENT expr3 /DEDENT
 apply1 : expr0 /SPACE expr1
 apply0 : expr0 expr0
 
-prop : expr0? /DOT ID
+resolve : DASH ID
+op : (OP | DASH)+
+prop : expr0? DOT DASH? ID
 
 bracket : /LBRACKET expr3 /RBRACKET
 group : /LPAREN expr3 /RPAREN

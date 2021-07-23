@@ -1,7 +1,10 @@
 #lang br
 (require brag/support syntax/readerr)
 
-(define-lex-abbrev digits (:+ (char-set "0123456789")))
+(define-lex-abbrevs
+  (alpha (:+ alphabetic))
+  (alnum (:+ (:or alphabetic numeric)))
+  (digits (:+ (char-set "0123456789"))))
 
 (define current-level 0) ; current indentation level
 
@@ -46,8 +49,9 @@
    ["}" (token 'RCURLY lexeme)]
    ["\\" (token 'BACKSLASH lexeme)]
    ["." (token 'DOT lexeme)]
-   [(:+ (char-set "+-*/=><")) (token 'OP (string->symbol lexeme))]
-   [(:seq alphabetic (:* (:or alphabetic numeric)))
+   [(:+ (char-set "+*/=><")) (token 'OP (string->symbol lexeme))]
+   [(:+ "-") (token 'DASH (string->symbol lexeme))]
+   [(:seq alpha (:* (:seq (:* "-") alnum)))
     (token 'ID (string->symbol lexeme))]
    [(:seq (:? "-") digits "." digits) (token 'DECIMAL (string->number lexeme))]
    [(:seq (:? "-") digits) (token 'INTEGER (string->number lexeme))]
