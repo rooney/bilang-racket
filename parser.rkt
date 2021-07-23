@@ -15,7 +15,7 @@ return : /NEWLINE? expr3
        | INTEGER
        | DECIMAL
        | STRING
-       | ID
+       | keyword | label | ID
        | resolve
        | op
        | prop
@@ -25,6 +25,9 @@ apply3 : expr2 /NEWLINE expr3
 apply2 : expr1 /INDENT expr3 /DEDENT
 apply1 : expr0 /SPACE expr1
 apply0 : expr0 expr0
+
+label : COLON ID?
+keyword : ID COLON
 
 resolve : DASH ID
 op : (OP | DASH)+

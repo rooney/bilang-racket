@@ -49,6 +49,7 @@
    ["}" (token 'RCURLY lexeme)]
    ["\\" (token 'BACKSLASH lexeme)]
    ["." (token 'DOT lexeme)]
+   [":" (token 'COLON lexeme)]
    [(:+ (char-set "+*/=><")) (token 'OP (string->symbol lexeme))]
    [(:+ "-") (token 'DASH (string->symbol lexeme))]
    [(:seq alpha (:* (:seq (:* "-") alnum)))
