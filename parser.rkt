@@ -13,7 +13,6 @@ return : /NEWLINE? expr5
 
 @expr2 : apply2
        | expr1
-       | op
 
 @expr1 : apply1
        | expr0 
@@ -28,7 +27,7 @@ return : /NEWLINE? expr5
        | bracket | group | thunk
 
 apply5 : expr4 /NEWLINE expr5
-apply4 : expr0 /SPACE expr4
+apply4 : (expr0|op) /SPACE (apply4|apply3|op)
 apply3 : op (/SPACE expr2 | /INDENT expr5 /DEDENT)
 apply2 : expr1 /INDENT expr5 /DEDENT
 apply1 : expr0 /SPACE expr1
