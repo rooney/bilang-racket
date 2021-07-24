@@ -1,12 +1,19 @@
 #lang brag
 
-return : /NEWLINE? expr3
+return : /NEWLINE? expr5
+
+@expr5 : apply5
+       | expr4 (/NEWLINE | /INDENT /DEDENT)?
+
+@expr4 : apply4
+       | expr3
 
 @expr3 : apply3
-       | expr2 (/NEWLINE | /INDENT /DEDENT)?
+       | expr2
 
 @expr2 : apply2
        | expr1
+       | op
 
 @expr1 : apply1
        | expr0 
@@ -17,25 +24,27 @@ return : /NEWLINE? expr3
        | STRING
        | keyword | label | ID
        | resolve
-       | op
        | prop
        | bracket | group | thunk
 
-apply3 : expr2 /NEWLINE expr3
-apply2 : expr1 /INDENT expr3 /DEDENT
+apply5 : expr4 /NEWLINE expr5
+apply4 : expr0 /SPACE expr4
+apply3 : op (/SPACE expr2 | /INDENT expr5 /DEDENT)
+apply2 : expr1 /INDENT expr5 /DEDENT
 apply1 : expr0 /SPACE expr1
 apply0 : expr0 expr0
+       | expr0 op
+       | op expr0
 
-label : COLON ID?
 keyword : ID COLON
-
+label : COLON ID?
 resolve : DASH ID
-op : (OP | DASH)+
 prop : expr0? DOT DASH? ID
+op : (OP | DASH)+
 
-bracket : /LBRACKET expr3 /RBRACKET
-group : /LPAREN expr3 /RPAREN
-      | /BACKSLASH /INDENT expr3 /DEDENT
-thunk : /LCURLY expr3 /RCURLY 
-      | /INDENT expr3 /DEDENT
+bracket : /LBRACKET expr5 /RBRACKET
+group : /LPAREN expr5 /RPAREN
+      | /BACKSLASH /INDENT expr5 /DEDENT
+thunk : /LCURLY expr5 /RCURLY 
+      | /INDENT expr5 /DEDENT
 
