@@ -1,48 +1,52 @@
 #lang brag
 
-return : /NEWLINE? expr4
-
-@expr4 : apply4
-       | expr3 (/NEWLINE | /INDENT /DEDENT)?
+return : /NEWLINE? expr3
 
 @expr3 : apply3
-       | expr2
+       | expr2 (/NEWLINE | /INDENT /DEDENT)?
+
+@expr2 : applyZ
+       | apply2
+       | expr1
        | op
 
-@expr2 : apply2
-       | expr1
-
 @expr1 : apply1
+       | exprO
+
+@exprO : applyO
        | expr0 
 
 @expr0 : apply0
-       | num
-       | STRING
-       | keyword | label | ID | -id
-       | prop
-       | grouping
+       | e
 
-apply4 : expr3 /NEWLINE expr4
-apply3 : expr0 /SPACE (apply3|op)
-       | op /SPACE expr3
+@e : num
+   | STRING
+   | keyword | label | name
+   | prop
+   | grouping
+
+apply3 : expr2 /NEWLINE expr3
+applyZ : expr0 /SPACE (applyZ|op)
+       | op /SPACE expr2
        | op dent
 apply2 : expr1 dent
-apply1 : expr0 /SPACE expr1
-apply0 : expr0 expr0
-       | expr0 op
-       | op expr0
+apply1 : exprO /SPACE expr1
+applyO : expr0 op
+apply0 : expr0 e
+       | op e
 
 @num : INTEGER | DECIMAL
+@name : ID | -id
 @grouping : paren | brace | brakt | undent
 
-dent : INDENT expr4 DEDENT
-paren : /LPAREN (expr4|dent) /RPAREN
-brace : /LCURLY (expr4|dent) /RCURLY 
-brakt : /LBRAKT (expr4|dent) /RBRAKT
+dent : /INDENT expr3 /DEDENT
+paren : /LPAREN (expr2|dent) /RPAREN
+brace : /LCURLY (expr2|dent) /RCURLY 
+brakt : /LBRAKT (expr2|dent) /RBRAKT
 undent : /BACKSLASH dent
 
 keyword : ID COLON
 label : COLON ID?
 -id : DASH ID
-prop : expr0? DOT DASH? ID
+prop : e? DOT DASH? ID
 op : (OP | DASH)+
