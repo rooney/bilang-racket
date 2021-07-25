@@ -8,13 +8,13 @@
 
 (define current-level 0) ; current indentation level
 
-(define (token-INDENT lexeme)
+(define (token-INDENT)
   (set! current-level (+ current-level 1))  
-  (token 'INDENT lexeme))
+  (token 'INDENT ''INDENT))
 
-(define (token-DEDENT lexeme)
+(define (token-DEDENT)
   (set! current-level (- current-level 1))  
-  (token 'DEDENT lexeme))
+  (token 'DEDENT ''DEDENT))
 
 (define bilang-lexer
   (lexer-srcloc
@@ -25,7 +25,7 @@
       (cond
         [(= indent-amount current-level) (token 'NEWLINE lexeme)]
         [(> indent-amount current-level)
-         (cond [(= indent-amount next-level) (token-INDENT lexeme)]
+         (cond [(= indent-amount next-level) (token-INDENT)]
                [else (raise-read-error "too much indentation"
                                        (file-path) 
                                        (position-line end-pos)
@@ -37,19 +37,19 @@
          (cond [(< indent-amount current-level) ; need multiple dedents
                 ; rewind the input so on next iteration it will produce dedent again
                 (file-position input-port (- (file-position input-port) (string-length lexeme)))])
-         (token-DEDENT lexeme)]))]
+         (token-DEDENT)]))]
    [(eof) 
-    (cond [(> current-level 0) (token-DEDENT lexeme)])]
+    (cond [(> current-level 0) (token-DEDENT)])]
    [#\space (token 'SPACE lexeme)]
    ["(" (token 'LPAREN lexeme)]
    [")" (token 'RPAREN lexeme)]
-   ["[" (token 'LBRACKET lexeme)]
-   ["]" (token 'RBRACKET lexeme)]
+   ["[" (token 'LBRAKT lexeme)]
+   ["]" (token 'RBRAKT lexeme)]
    ["{" (token 'LCURLY lexeme)]
    ["}" (token 'RCURLY lexeme)]
    ["\\" (token 'BACKSLASH lexeme)]
    ["." (token 'DOT lexeme)]
-   [":" (token 'COLON lexeme)]
+   [":" (token 'COLON ':)]
    [(:+ (char-set "+*/=><")) (token 'OP (string->symbol lexeme))]
    [(:+ "-") (token 'DASH (string->symbol lexeme))]
    [(:seq alpha (:* (:seq (:* "-") alnum)))
