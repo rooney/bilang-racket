@@ -19,10 +19,10 @@ return : /NEWLINE? expr3
 @expr0 : apply0
        | e
 
-@e : INTEGER | DECIMAL
+@e : prop
+   | INTEGER | DECIMAL
    | STRING
    | keyword | label | ID
-   | prop
    | paren | brace | bracket | comma | undent
    | PAREN | BRACE | BRACKET
 
