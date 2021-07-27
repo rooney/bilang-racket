@@ -1,28 +1,24 @@
 #lang brag
-
 return : /NEWLINE? expr3
 
 @expr3 : apply3
        | exprZ (/NEWLINE | /INDENT /DEDENT)?
-
 @exprZ : applyZ
        | apply2
-       | expr1
        | op
-
+       | expr1
 @expr1 : apply1
        | exprO
-
 @exprO : applyO
+       | keyword
        | expr0 
-
 @expr0 : apply0
        | e
 
-@e : prop
-   | INTEGER | DECIMAL
-   | STRING
-   | keyword | label | ID
+@e : INTEGER | DECIMAL
+   | STRING 
+   | label | ID
+   | prop
    | paren | brace | bracket | comma | undent
    | PAREN | BRACE | BRACKET
 
@@ -32,7 +28,8 @@ applyZ : exprO /SPACE (applyZ|op)
        | op dent
 apply2 : expr1 dent
 apply1 : exprO /SPACE expr1
-applyO : expr0 op
+applyO : keyword exprO
+       | expr0 op
 apply0 : expr0 e
        | op e
 
@@ -47,7 +44,7 @@ apply0 : expr0 e
 @brace : /LBRACE subexpr /RBRACE 
 @bracket : /LBRACKET subexpr /RBRACKET
 
-keyword : (OP|ID) COLON
-label : COLON ID?
-prop : e? DOT ID
+keyword : (OP | OP? ID OP?) COLON
+label : COLON OP? ID? OP?
+prop : DOT ID
 @op : OP

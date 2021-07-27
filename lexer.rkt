@@ -69,7 +69,7 @@
    [(:seq "." (:* "-")) (token 'DOT lexeme)]
    ["," (token 'COMMA lexeme)]
    [":" (token 'COLON ':)]
-   [(:+ (char-set "+-*/=><")) (token 'OP (string->symbol lexeme))]
+   [(:+ (char-set "+-*/=><?")) (token 'OP (string->symbol lexeme))]
    [(:seq alpha (:* (:seq (:* "-") alnum)))
     (token 'ID (string->symbol lexeme))]
    [(:seq (:? "-") digits "." digits) (token 'DECIMAL (string->number lexeme))]
