@@ -23,7 +23,7 @@ return : /NEWLINE? expr3
    | STRING
    | keyword | label | ID
    | prop
-   | paren | brace | bracket | undent
+   | paren | brace | bracket | comma | undent
    | PAREN | BRACE | BRACKET
 
 apply3 : exprZ /NEWLINE expr3
@@ -36,6 +36,8 @@ applyO : expr0 op
 apply0 : expr0 e
        | op e
 
+@comma : expr1 /COMMA
+       | expr3 /NEWLINE /COMMA
 @subexpr : expr3
          | dent /NEWLINE 
 @dent : /INDENT expr3 /DEDENT

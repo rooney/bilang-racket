@@ -50,7 +50,9 @@
                                        excess-amount
                                        )])]
         [(< indent-amount current-level)
-         (multi-token (make-list (- current-level indent-amount) token-DEDENT) 
+         (multi-token (append (make-list (- current-level indent-amount)
+                                         token-DEDENT)
+                              ''NEWLINE)
                       input-port 
                       lexeme)]))]
    [(eof) 
@@ -65,6 +67,7 @@
    ["]" (token 'RBRACKET lexeme)]
    ["\\" (token 'BACKSLASH lexeme)]
    [(:seq "." (:* "-")) (token 'DOT lexeme)]
+   ["," (token 'COMMA lexeme)]
    [":" (token 'COLON ':)]
    [(:+ (char-set "+-*/=><")) (token 'OP (string->symbol lexeme))]
    [(:seq alpha (:* (:seq (:* "-") alnum)))
