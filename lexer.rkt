@@ -63,10 +63,9 @@
    ["[" (multi-token '(LBRACKET BRACKET) input-port lexeme)]
    ["]" (token 'RBRACKET lexeme)]
    ["\\" (token 'BACKSLASH lexeme)]
-   ["." (token 'DOT lexeme)]
+   [(:seq "." (:* "-")) (token 'DOT lexeme)]
    [":" (token 'COLON ':)]
-   [(:+ (char-set "+*/=><")) (token 'OP (string->symbol lexeme))]
-   [(:+ "-") (token 'DASH (string->symbol lexeme))]
+   [(:+ (char-set "+-*/=><")) (token 'OP (string->symbol lexeme))]
    [(:seq alpha (:* (:seq (:* "-") alnum)))
     (token 'ID (string->symbol lexeme))]
    [(:seq (:? "-") digits "." digits) (token 'DECIMAL (string->number lexeme))]

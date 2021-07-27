@@ -21,7 +21,7 @@ return : /NEWLINE? expr3
 
 @e : INTEGER | DECIMAL
    | STRING
-   | keyword | label | ID | -id
+   | keyword | label | ID
    | prop
    | paren | brace | bracket | undent
    | PAREN | BRACE | BRACKET
@@ -47,6 +47,5 @@ apply0 : expr0 e
 
 keyword : ID COLON
 label : COLON ID?
--id : DASH ID
-prop : e? DOT DASH? ID
-op : (OP | DASH)+
+prop : e? DOT ID
+@op : OP
