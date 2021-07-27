@@ -27,7 +27,7 @@ return : /NEWLINE? expr3
    | PAREN | BRACE | BRACKET
 
 apply3 : exprZ /NEWLINE expr3
-applyZ : expr0 /SPACE (applyZ|op)
+applyZ : exprO /SPACE (applyZ|op)
        | op /SPACE exprZ
        | op dent
 apply2 : expr1 dent
