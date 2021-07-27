@@ -45,7 +45,7 @@ apply0 : expr0 e
 @brace : /LBRACE subexpr /RBRACE 
 @bracket : /LBRACKET subexpr /RBRACKET
 
-keyword : ID COLON
+keyword : (OP|ID) COLON
 label : COLON ID?
 prop : e? DOT ID
 @op : OP
