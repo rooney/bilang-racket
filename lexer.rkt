@@ -22,7 +22,8 @@
          (set! pending-tokens 
                (map (lambda (x)
                       (cond [(procedure? x) (x)]
-                            [(symbol? x) (token x lexeme)]))
+                            [(symbol? x) (token x lexeme)]
+                            [(pair? x) (token (car x) (cdr x))]))
                     prod))])
   (cond [(> (length pending-tokens) 1)
          (rewind! input-port lexeme)]) ; so this will be called again
@@ -56,11 +57,11 @@
     (cond [(> current-level 0) (token-DEDENT)])]
 
    [#\space (token 'SPACE lexeme)]
-   ["(" (multi-token '(LPAREN PAREN) input-port lexeme)]
+   ["(" (multi-token '(LPAREN (PAREN . paren)) input-port lexeme)]
    [")" (token 'RPAREN lexeme)]
-   ["{" (multi-token '(LBRACE BRACE) input-port lexeme)]
+   ["{" (multi-token '(LBRACE (BRACE . brace)) input-port lexeme)]
    ["}" (token 'RBRACE lexeme)]
-   ["[" (multi-token '(LBRACKET BRACKET) input-port lexeme)]
+   ["[" (multi-token '(LBRACKET (BRACKET . bracket)) input-port lexeme)]
    ["]" (token 'RBRACKET lexeme)]
    ["\\" (token 'BACKSLASH lexeme)]
    [(:seq "." (:* "-")) (token 'DOT lexeme)]
