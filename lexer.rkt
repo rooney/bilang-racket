@@ -9,12 +9,27 @@
 (define current-level 0) ; current indentation level
 
 (define (token-INDENT)
-  (set! current-level (+ current-level 1))  
+  (set! current-level (add1 current-level))  
   (token 'INDENT ''INDENT))
 
 (define (token-DEDENT)
-  (set! current-level (- current-level 1))  
+  (set! current-level (sub1 current-level))  
   (token 'DEDENT ''DEDENT))
+
+(define pending-tokens '())
+(define (multi-token prod input-port lexeme)
+  (cond [(empty? pending-tokens)
+         (set! pending-tokens 
+               (map (lambda (x)
+                      (cond [(procedure? x) (x)]
+                            [(symbol? x) (token x lexeme)]))
+                    prod))])
+  (cond [(> (length pending-tokens) 1)
+         (rewind! input-port lexeme)]) ; so this will be called again
+  (pop! pending-tokens))
+
+(define (rewind! input-port lexeme)
+  (file-position input-port (- (file-position input-port) (string-length lexeme))))
 
 (define bilang-lexer
   (lexer-srcloc
@@ -34,19 +49,19 @@
                                        excess-amount
                                        )])]
         [(< indent-amount current-level)
-         (cond [(< indent-amount current-level) ; need multiple dedents
-                ; rewind the input so on next iteration it will produce dedent again
-                (file-position input-port (- (file-position input-port) (string-length lexeme)))])
-         (token-DEDENT)]))]
+         (multi-token (make-list (- current-level indent-amount) token-DEDENT) 
+                      input-port 
+                      lexeme)]))]
    [(eof) 
     (cond [(> current-level 0) (token-DEDENT)])]
+
    [#\space (token 'SPACE lexeme)]
-   ["(" (token 'LPAREN lexeme)]
+   ["(" (multi-token '(LPAREN PAREN) input-port lexeme)]
    [")" (token 'RPAREN lexeme)]
-   ["[" (token 'LBRAKT lexeme)]
-   ["]" (token 'RBRAKT lexeme)]
-   ["{" (token 'LCURLY lexeme)]
-   ["}" (token 'RCURLY lexeme)]
+   ["{" (multi-token '(LBRACE BRACE) input-port lexeme)]
+   ["}" (token 'RBRACE lexeme)]
+   ["[" (multi-token '(LBRACKET BRACKET) input-port lexeme)]
+   ["]" (token 'RBRACKET lexeme)]
    ["\\" (token 'BACKSLASH lexeme)]
    ["." (token 'DOT lexeme)]
    [":" (token 'COLON ':)]
