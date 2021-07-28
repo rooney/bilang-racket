@@ -5,7 +5,7 @@ return : /NEWLINE? expr3
        | exprZ (/NEWLINE | /INDENT /DEDENT)?
 @exprZ : applyZ
        | apply2
-       | op
+       | OP
        | expr1
 @expr1 : apply1
        | exprO
@@ -23,15 +23,15 @@ return : /NEWLINE? expr3
    | PAREN | BRACE | BRACKET
 
 apply3 : exprZ /NEWLINE expr3
-applyZ : exprO /SPACE (applyZ|op)
-       | op /SPACE exprZ
-       | op dent
+applyZ : exprO /SPACE (applyZ|OP)
+       | OP /SPACE exprZ
+       | OP dent
 apply2 : expr1 dent
 apply1 : exprO /SPACE expr1
 applyO : keyword exprO
-       | expr0 op
+       | expr0 OP
 apply0 : expr0 e
-       | op e
+       | OP e
 
 @comma : expr1 /COMMA
        | expr3 /NEWLINE /COMMA
@@ -44,7 +44,7 @@ apply0 : expr0 e
 @brace : /LBRACE subexpr /RBRACE 
 @bracket : /LBRACKET subexpr /RBRACKET
 
-keyword : (OP | OP? ID OP?) COLON
-label : COLON OP? ID? OP?
-prop : DOT ID
-@op : OP
+@name : OP? ID OP?
+keyword : (OP | name) COLON
+label : COLON name?
+prop : DOT name
