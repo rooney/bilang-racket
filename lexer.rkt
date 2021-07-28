@@ -21,8 +21,7 @@
   (cond [(empty? pending-tokens)
          (set! pending-tokens 
                (map (lambda (x)
-                      (cond [(procedure? x) (x)]
-                            [(symbol? x) (token x lexeme)]
+                      (cond [(symbol? x) (token x lexeme)]
                             [(pair? x) (token (car x) (cdr x))]))
                     prod))])
   (cond [(> (length pending-tokens) 1)
@@ -50,11 +49,9 @@
                                        excess-amount
                                        )])]
         [(< indent-amount current-level)
-         (multi-token (append (make-list (- current-level indent-amount)
-                                         token-DEDENT)
-                              ''NEWLINE)
-                      input-port 
-                      lexeme)]))]
+            (rewind! input-port lexeme)
+            (token-DEDENT)]))]
+
    [(eof) 
     (cond [(> current-level 0) (token-DEDENT)])]
 
