@@ -25,7 +25,7 @@
                             [(pair? x) (token (car x) (cdr x))]))
                     prod))])
   (cond [(> (length pending-tokens) 1)
-         (rewind! input-port lexeme)]) ; so this will be called again
+         (rewind! input-port lexeme)])
   (pop! pending-tokens))
 
 (define (rewind! input-port lexeme)

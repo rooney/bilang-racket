@@ -13,11 +13,12 @@ return : /NEWLINE? expr3
        | keyword
        | expr0 
 @expr0 : apply0
+       | label | alias
        | e
 
 @e : INTEGER | DECIMAL
    | STRING 
-   | label | ID
+   | ID
    | group | PAREN | BRACE | BRACKET | undent
    | comma | dot
 
@@ -43,6 +44,7 @@ group : /LPAREN subexpr? /RPAREN
       | /LBRACE subexpr? /RBRACE
       | /LBRACKET subexpr? /RBRACKET
 
+alias : label label+
 @name : OP? ID OP?
 keyword : (OP|name) COLON
 label : COLON name?
