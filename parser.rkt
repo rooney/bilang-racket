@@ -21,8 +21,8 @@ return : /NEWLINE? expr3
 @e : INTEGER | DECIMAL
    | STRING 
    | ID
-   | group | PAREN | BRACE | BRACKET | undent
    | dot
+   | group | PAREN | BRACE | BRACKET | undent
 
 apply3 : exprZ /NEWLINE expr3
 applyZ : exprO /SPACE (applyZ|OP)
@@ -44,8 +44,8 @@ group : /LPAREN subexpr? /RPAREN
       | /LBRACE subexpr? /RBRACE
       | /LBRACKET subexpr? /RBRACKET
 
-alias : label label+
 @name : OP? ID OP?
 keyword : (OP|name) COLON
-label : COLON name?
+label : COLON (OP|name)?
 dot : /DOT name
+alias : label label+
