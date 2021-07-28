@@ -18,9 +18,8 @@ return : /NEWLINE? expr3
 @e : INTEGER | DECIMAL
    | STRING 
    | label | ID
+   | group | PAREN | BRACE | BRACKET | comma | undent
    | prop
-   | paren | brace | bracket | comma | undent
-   | PAREN | BRACE | BRACKET
 
 apply3 : exprZ /NEWLINE expr3
 applyZ : exprO /SPACE (applyZ|OP)
@@ -40,9 +39,9 @@ apply0 : expr0 e
 @dent : /INDENT expr3 /DEDENT
 @undent : /BACKSLASH dent
 
-@paren : /LPAREN subexpr /RPAREN
-@brace : /LBRACE subexpr /RBRACE 
-@bracket : /LBRACKET subexpr /RBRACKET
+group : /LPAREN subexpr /RPAREN
+      | /LBRACE subexpr /RBRACE
+      | /LBRACKET subexpr /RBRACKET
 
 @name : OP? ID OP?
 keyword : (OP | name) COLON
