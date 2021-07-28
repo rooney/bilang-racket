@@ -13,6 +13,8 @@ return : /NEWLINE? expr3
        | keyword
        | expr0 
 @expr0 : apply0
+       | apply3 /COMMA
+       | expr1 /COMMA
        | label | alias
        | e
 
@@ -20,7 +22,7 @@ return : /NEWLINE? expr3
    | STRING 
    | ID
    | group | PAREN | BRACE | BRACKET | undent
-   | comma | dot
+   | dot
 
 apply3 : exprZ /NEWLINE expr3
 applyZ : exprO /SPACE (applyZ|OP)
@@ -33,8 +35,6 @@ applyO : keyword exprO
 apply0 : expr0 e
        | OP e
 
-@comma : expr1 /COMMA
-       | expr3 /NEWLINE /COMMA
 @subexpr : expr3
          | dent /NEWLINE 
 @dent : /INDENT expr3 /DEDENT
