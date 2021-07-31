@@ -2,17 +2,21 @@
 return : /NEWLINE? expr3
 
 @expr3 : apply3
-       | exprZ (/NEWLINE | /INDENT /DEDENT)?
+       | exprZ (/SPACE | /NEWLINE | /INDENT /DEDENT)?
 @exprZ : applyZ
        | apply2
+       | pipe2Z
        | exprL
 @exprL : applyL
-       | OP
+       | extOP
+@extOP : apptOP|OP
+       | exp1p
+@exp1p : pipe1L
        | exprK
 @exprK : applyK
-       | commaX
        | expr1
 @expr1 : apply1
+       | commaX
        | exprO
 @exprO : applyO
        | keyword
@@ -23,19 +27,23 @@ return : /NEWLINE? expr3
        | e
 
 apply3 : exprZ /NEWLINE expr3
-applyZ : (commaX|exprO|OP) /SPACE applyZ
+applyZ : pack /SPACE applyZ
        | OP /SPACE apply2
        | OP dent
 apply2 : exprK dent
-applyL : OP /SPACE exprK
-       | (commaX|exprO|OP) /SPACE (applyL|OP)
+pipe2Z : exp1p /PIPE /SPACE (apply2|applyZ)
+applyL : OP /SPACE exp1p
+       | pack /SPACE applyL
+apptOP : pack /SPACE (apptOP|OP)
+pipe1L : extOP /PIPE /SPACE exprL
 applyK : commaX /SPACE expr1
+apply1 : exprO /SPACE expr1
+ @pack : exprO|commaX | (OP)
 @commaX : commaOP
         | comma
 commaOP : comma OP
 @comma : (apply2|applyZ|apply3) /NEWLINE /COMMA
        | exprL /NEWLINE? /COMMA
-apply1 : exprO /SPACE expr1
 applyO : expr0 OP
        | keyword exprO
 apply0 : expr0 e
