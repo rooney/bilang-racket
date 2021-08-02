@@ -1,23 +1,23 @@
 #lang brag
 return : /NEWLINE? expr3
 
+@exp32 : apply3 | applyZ | apply2 | pipe-2
 @expr3 : apply3
        | exprZ (/SPACE | /NEWLINE | /INDENT /DEDENT)?
 @exprZ : applyZ
        | apply2
-       | pipe2Z
+       | pipe-2
        | exprL
 @exprL : applyL
-       | exTOP
-@exTOP : appTOP|OP
-       | exp1p
-@exp1p : pipe1L
+       | aptoOP|OP
        | exprK
 @exprK : applyK
+       | pipe-1
        | expr1
 @expr1 : apply1
        | exprC
 @exprC : applyC
+       | pipe-0
        | exprO
 @exprO : applyO
        | expr0 
@@ -31,19 +31,24 @@ applyZ : packs /SPACE applyZ
        | keyop /SPACE apply2
        | keyop dent
 apply2 : exprK dent
-pipe2Z : exp1p /PIPE /SPACE (apply2|applyZ)
-applyL : keyop /SPACE exp1p
+pipe-2 : piped dent
+applyL : keyop /SPACE exprK
        | packs /SPACE applyL
-appTOP : packs /SPACE (appTOP|OP)
-pipe1L : exTOP /PIPE /SPACE exprL
-applyK : applyC /SPACE expr1
+aptoOP : packs /SPACE (aptoOP|OP)
+pipe-1 : piped /SPACE exprL
+applyK : pipe-0 /SPACE expr1
+       | applyC /SPACE expr1
 apply1 : exprO /SPACE expr1
- @packs : exprC | (keyop)
+ @packs : (keyop)| exprC
+ @keyop : keyword|OP
 @applyC : commaOP
         | comma
 commaOP : comma OP
-@comma : (apply2|applyZ|apply3) /NEWLINE /COMMA
+@comma : exp32 /NEWLINE /COMMA
        | exprL /NEWLINE? /COMMA
+@piped : exprL /NEWLINE? /PIPE
+       | exp32 /NEWLINE /PIPE
+pipe-0 : piped (OP|exprO)
 applyO : keyword exprO
        | expr0 OP
 apply0 : expr0 e
@@ -68,5 +73,4 @@ alias : label label+
 @name : OP? ID OP?
 label : COLON (OP|name)?
 keyword : (OP|name) COLON
-@keyop : OP|keyword
 dot : /DOT name

@@ -8,7 +8,7 @@
    result))
 
 (test #<<EOF
-let scores = [1, 2, 3]
+let scores = {1, 2, 3}
 let avg-score = \
  scores.reduce() to:0 -> :a:sum :score
   sum+ score
@@ -21,7 +21,7 @@ EOF
           let
           (applyL
            scores
-           (applyL = (group (applyK (applyK (apply0 bracket 1) 2) 3)))))
+           (applyL = (group (applyK (applyK (apply0 brace 1) 2) 3)))))
          (apply3
           (applyL
            let
@@ -43,3 +43,6 @@ EOF
                /)
               (apply0 (apply0 scores (dot count)) (group paren))))))
           (apply1 println avg-score)))))
+
+(test "let top10avg = {,: sort,: reverse,: first 10,: average}"
+      '(return (applyL let (applyL top10avg (applyL = (group (pipe-1 (pipe-1 (pipe-1 (pipe-1 brace sort) reverse) (apply1 first 10)) average)))))))
