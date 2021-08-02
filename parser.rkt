@@ -8,15 +8,16 @@ return : /NEWLINE? expr3
        | pipe2Z
        | exprL
 @exprL : applyL
-       | extOP
-@extOP : apptOP|OP
+       | exTOP
+@exTOP : appTOP|OP
        | exp1p
 @exp1p : pipe1L
        | exprK
 @exprK : applyK
        | expr1
 @expr1 : apply1
-       | commaX
+       | exprC
+@exprC : applyC
        | exprO
 @exprO : applyO
        | expr0 
@@ -26,25 +27,25 @@ return : /NEWLINE? expr3
        | e
 
 apply3 : exprZ /NEWLINE expr3
-applyZ : pack /SPACE applyZ
-       | OP /SPACE apply2
-       | OP dent
+applyZ : packs /SPACE applyZ
+       | keyop /SPACE apply2
+       | keyop dent
 apply2 : exprK dent
 pipe2Z : exp1p /PIPE /SPACE (apply2|applyZ)
-applyL : OP /SPACE exp1p
-       | pack /SPACE applyL
-apptOP : pack /SPACE (apptOP|OP)
-pipe1L : extOP /PIPE /SPACE exprL
-applyK : commaX /SPACE expr1
+applyL : keyop /SPACE exp1p
+       | packs /SPACE applyL
+appTOP : packs /SPACE (appTOP|OP)
+pipe1L : exTOP /PIPE /SPACE exprL
+applyK : applyC /SPACE expr1
 apply1 : exprO /SPACE expr1
- @pack : exprO|commaX | (OP)
-@commaX : commaOP
+ @packs : exprC | (keyop)
+@applyC : commaOP
         | comma
 commaOP : comma OP
 @comma : (apply2|applyZ|apply3) /NEWLINE /COMMA
        | exprL /NEWLINE? /COMMA
-applyO : expr0 OP
-       | keyword exprO
+applyO : keyword exprO
+       | expr0 OP
 apply0 : expr0 e
        | OP e
 
@@ -67,4 +68,5 @@ alias : label label+
 @name : OP? ID OP?
 label : COLON (OP|name)?
 keyword : (OP|name) COLON
+@keyop : OP|keyword
 dot : /DOT name
