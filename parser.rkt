@@ -19,7 +19,6 @@ return : /NEWLINE? expr3
        | commaX
        | exprO
 @exprO : applyO
-       | keyword
        | expr0 
 @expr0 : apply0
        | label
