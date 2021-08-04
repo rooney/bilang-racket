@@ -6,7 +6,7 @@
   (alnum (:+ (:or alphabetic numeric)))
   (digits (:+ (char-set "0123456789"))))
 
-(define current-level 0) ; current indentation level
+(define current-level 0)
 
 (define (token-INDENT)
   (set! current-level (add1 current-level))  
@@ -16,22 +16,7 @@
   (set! current-level (sub1 current-level))  
   (token 'DEDENT ''DEDENT))
 
-(define pending-tokens '())
-(define (multi-token prod input-port lexeme)
-  (cond [(empty? pending-tokens)
-         (set! pending-tokens 
-               (map (lambda (x)
-                      (cond [(symbol? x) (token x lexeme)]
-                            [(pair? x) (token (car x) (cdr x))]))
-                    prod))])
-  (cond [(> (length pending-tokens) 1)
-         (rewind! input-port lexeme)])
-  (pop! pending-tokens))
-
-(define (rewind! input-port lexeme)
-  (file-position input-port (- (file-position input-port) (string-length lexeme))))
-
-(define bilang-lexer
+(define main-lexer
   (lexer-srcloc
    [(:seq (:* #\space) "\n" (:* (char-set " \n")))
     (let* ([next-level (+ current-level 1)]
@@ -49,18 +34,17 @@
                                        excess-amount
                                        )])]
         [(< indent-amount current-level)
-            (rewind! input-port lexeme)
-            (token-DEDENT)]))]
-
+         (append (build-list (- current-level indent-amount)
+                             (lambda _ (token-DEDENT))) 
+                 (list (token 'NEWLINE lexeme)))]))]
    [(eof) 
     (cond [(> current-level 0) (token-DEDENT)])]
-
    [#\space (token 'SPACE lexeme)]
-   ["(" (multi-token '(LPAREN (PAREN . paren)) input-port lexeme)]
+   ["(" (list (token 'LPAREN lexeme) (token 'PAREN 'paren))]
    [")" (token 'RPAREN lexeme)]
-   ["{" (multi-token '(LBRACE (BRACE . brace)) input-port lexeme)]
+   ["{" (list (token 'LBRACE lexeme) (token 'BRACE 'brace))]
    ["}" (token 'RBRACE lexeme)]
-   ["[" (multi-token '(LBRACKET (BRACKET . bracket)) input-port lexeme)]
+   ["[" (list (token 'LBRACKET lexeme) (token 'BRACKET 'bracket))]
    ["]" (token 'RBRACKET lexeme)]
    ["\\" (token 'BACKSLASH lexeme)]
    [",:" (token 'PIPE lexeme)]
@@ -68,7 +52,7 @@
    [":" (token 'COLON ':)]
    ["." (token 'DOT lexeme)]
    [(:+ (char-set "+-*/=><?")) (token 'OP (string->symbol lexeme))]
-   [(:seq alpha (:* (:seq (:* "-") alnum)))
+   [(:seq alpha (:* (:seq (:* "-") alnum))) 
     (token 'ID (string->symbol lexeme))]
    [(:seq (:? "-") digits "." digits) (token 'DECIMAL (string->number lexeme))]
    [(:seq (:? "-") digits) (token 'INTEGER (string->number lexeme))]
@@ -76,5 +60,29 @@
     (token 'STRING
            (substring lexeme
                       1 (sub1 (string-length lexeme))))]))
+
+(define active-lexer main-lexer)
+(define modes '())
+
+(define (push-mode! lexer)
+        (push! modes active-lexer)
+        (set! active-lexer lexer))
+
+(define (pop-mode!)
+        (set! active-lexer (pop! modes)))
+
+(define pending-tokens '())
+(define (bilang-lexer ip)
+  (if (empty? pending-tokens)
+      (let* ([produce (active-lexer ip)]
+             [tokens (srcloc-token-token produce)])
+        (if (list? tokens)
+            (let* ([t-loc (srcloc-token-srcloc produce)]
+                   [prods (map (lambda (t) (srcloc-token t t-loc))
+                               tokens)])
+              (set! pending-tokens (cdr prods))
+              (car prods))
+            produce))
+      (pop! pending-tokens)))
 
 (provide bilang-lexer)
