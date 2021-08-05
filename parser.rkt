@@ -55,7 +55,7 @@ apply0 : expr0 e
        | OP e
 
 @e : INTEGER | DECIMAL
-   | STRING 
+   | string 
    | ID
    | dot
    | group | PAREN | BRACE | BRACKET | undent
@@ -74,3 +74,5 @@ alias : label label+
 label : COLON (OP|name)?
 keyword : (OP|name) COLON
 dot : /DOT name
+
+string : /QUOT (STRING|group)* /UNQUOT

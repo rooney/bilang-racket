@@ -4,27 +4,19 @@
 (define-lex-abbrevs
   (alpha (:+ alphabetic))
   (alnum (:+ (:or alphabetic numeric)))
-  (digits (:+ (char-set "0123456789"))))
-
-(define current-level 0)
-
-(define (token-INDENT)
-  (set! current-level (add1 current-level))  
-  (token 'INDENT ''INDENT))
-
-(define (token-DEDENT)
-  (set! current-level (sub1 current-level))  
-  (token 'DEDENT ''DEDENT))
+  (digits (:+ (char-set "0123456789")))
+  (quotd "\"")
+  (quots "'"))
 
 (define main-lexer
   (lexer-srcloc
    [(:seq (:* #\space) "\n" (:* (char-set " \n")))
-    (let* ([next-level (+ current-level 1)]
+    (let* ([next-level (+ current-indent-level 1)]
            [indent-amount (position-col end-pos)]
            [excess-amount (- indent-amount next-level)])
       (cond
-        [(= indent-amount current-level) (token 'NEWLINE lexeme)]
-        [(> indent-amount current-level)
+        [(= indent-amount current-indent-level) (token 'NEWLINE lexeme)]
+        [(> indent-amount current-indent-level)
          (cond [(= indent-amount next-level) (token-INDENT)]
                [else (raise-read-error "too much indentation"
                                        (file-path) 
@@ -33,19 +25,22 @@
                                        (- (position-offset end-pos) excess-amount)
                                        excess-amount
                                        )])]
-        [(< indent-amount current-level)
-         (append (build-list (- current-level indent-amount)
+        [(< indent-amount current-indent-level)
+         (append (build-list (- current-indent-level indent-amount)
                              (lambda _ (token-DEDENT))) 
                  (list (token 'NEWLINE lexeme)))]))]
    [(eof) 
-    (cond [(> current-level 0) (token-DEDENT)])]
+    (cond [(> current-indent-level 0) (token-DEDENT)])]
    [#\space (token 'SPACE lexeme)]
-   ["(" (list (token 'LPAREN lexeme) (token 'PAREN 'paren))]
+   ["(" (list (token 'LPAREN lexeme)
+              (token 'PAREN 'paren))]
+   ["[" (list (token 'LBRACKET lexeme)
+              (token 'BRACKET 'bracket))]
+   ["{" (list (token-LBRACE)
+              (token 'BRACE 'brace))]
    [")" (token 'RPAREN lexeme)]
-   ["{" (list (token 'LBRACE lexeme) (token 'BRACE 'brace))]
-   ["}" (token 'RBRACE lexeme)]
-   ["[" (list (token 'LBRACKET lexeme) (token 'BRACKET 'bracket))]
    ["]" (token 'RBRACKET lexeme)]
+   ["}" (token-RBRACE)]
    ["\\" (token 'BACKSLASH lexeme)]
    [",:" (token 'PIPE lexeme)]
    ["," (token 'COMMA lexeme)]
@@ -56,26 +51,63 @@
     (token 'ID (string->symbol lexeme))]
    [(:seq (:? "-") digits "." digits) (token 'DECIMAL (string->number lexeme))]
    [(:seq (:? "-") digits) (token 'INTEGER (string->number lexeme))]
-   [(:or (from/to "\"" "\"") (from/to "'" "'"))
-    (token 'STRING
-           (substring lexeme
-                      1 (sub1 (string-length lexeme))))]))
+   [quots
+    (begin
+      (push-mode! quots-lexer)
+      (token 'QUOT lexeme))]
+   [quotd
+    (begin
+      (push-mode! quotd-lexer)
+      (token 'QUOT lexeme))]))
+
+(define-macro (quot-lexer QUOT-TYPE)
+  #'(lexer-srcloc
+       [(:+ (:~ QUOT-TYPE "#")) (token 'STRING lexeme)]
+       ["#" (token 'STRING lexeme)]
+       ["#{" (list (token-LBRACE)
+                   (token 'BRACE 'brace))]
+       [QUOT-TYPE
+        (begin
+          (pop-mode!)
+          (token 'UNQUOT lexeme))]))
+
+(define quotd-lexer (quot-lexer quotd))
+(define quots-lexer (quot-lexer quots))
 
 (define active-lexer main-lexer)
 (define modes '())
 
 (define (push-mode! lexer)
-        (push! modes active-lexer)
-        (set! active-lexer lexer))
+  (push! modes active-lexer)
+  (set! active-lexer lexer))
 
 (define (pop-mode!)
-        (set! active-lexer (pop! modes)))
+  (set! active-lexer (pop! modes)))
+
+(define current-indent-level 0)
+
+(define (token-INDENT)
+  (set! current-indent-level (add1 current-indent-level))  
+  (token 'INDENT ''INDENT))
+
+(define (token-DEDENT)
+  (set! current-indent-level (sub1 current-indent-level))  
+  (token 'DEDENT ''DEDENT))
+
+(define (token-LBRACE)
+  (push-mode! main-lexer)
+  (token 'LBRACE ''LBRACE))
+
+(define (token-RBRACE)
+  (pop-mode!)
+  (token 'RBRACE ''RBRACE))
 
 (define pending-tokens '())
 (define (bilang-lexer ip)
   (if (empty? pending-tokens)
       (let* ([produce (active-lexer ip)]
-             [tokens (srcloc-token-token produce)])
+             [tokens (and (srcloc-token? produce) 
+                          (srcloc-token-token produce))])
         (if (list? tokens)
             (let* ([t-loc (srcloc-token-srcloc produce)]
                    [prods (map (lambda (t) (srcloc-token t t-loc))
