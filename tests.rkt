@@ -10,9 +10,9 @@
 (test #<<EOF
 let scores = {1, 2, 3}
 let avg-score = \
- scores.reduce() to:0 -> :a:sum :score
-  sum+ score
- ,/ scores.count()
+	scores.reduce() to:0 -> :a:sum :score
+		sum+ score
+	,/ scores.count()
 println avg-score
 EOF
       '(return
@@ -49,8 +49,8 @@ EOF
 let prompt(:text String, :then:callback) => print text, readln, callback
 
 let unless(:unwanted :x :then:replacement) =
- x== unwanted,? -> replacement
- else: -> x
+	x== unwanted,? -> replacement
+	else: -> x
 
 prompt name = 'Your name: '
 println "Hello #{name,: unless '', then:'World'}"
@@ -76,17 +76,17 @@ EOF
 
 (test #<<EOF
 let unless(:unwanted :x :then:replacement) =
- is x, unwanted,? -> replacement
- else: -> x
+	is x, unwanted,? -> replacement
+	else: -> x
 
 let is(:x :y) =
- y,:
-  : Predicate, =>:(apply to:x)
-  :            => x== y
+	y,:
+		: Predicate, =>:(apply to:x)
+		:            => x== y
 
 let
- apply(:f :to:x) => f x
- Predicate = @{: => Boolean}
+	apply(:f :to:x) => f x
+	Predicate = @{: => Boolean}
 EOF
       '(return
         (apply3

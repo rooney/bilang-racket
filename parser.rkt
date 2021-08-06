@@ -68,7 +68,7 @@ apply0 : expr0 e
 @subexpr : begin
          | expr3
          | dent
-@dent : /INDENT expr3 /DEDENT
+@dent : /INDENT /NEWLINE? expr3 /DEDENT
 @undent : /BACKSLASH dent
 
 @begin : BPAREN | BBRACE | BBRACKET
@@ -82,4 +82,5 @@ label : COLON (OP|name)?
 keyword : (OP|name) COLON
 dot : /DOT name
 
-string : /QUOT (STRING|group)* /UNQUOT
+string : /QUOTE (STRING|group|NEWLINE)* /UNQUOTE
+       | /QUOTE /INDENT (STRING|group|NEWLINE)* /DEDENT /UNQUOTE
