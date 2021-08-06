@@ -73,4 +73,42 @@ EOF
           (apply3
            (applyL prompt (applyL name (applyL = (string "Your name: "))))
            (apply1 println (string "Hello " (group (applyK (pipe-1 (applyO brace name) (apply1 unless (string))) (applyO (keyword then :) (string "World")))))))))))
-      
+
+(test #<<EOF
+let unless(:unwanted :x :then:replacement) =
+ is x, unwanted,? -> replacement
+ else: -> x
+
+let is(:x :y) =
+ y,:
+  : Predicate, =>:(apply to:x)
+  :            => x== y
+
+let
+ apply(:f :to:x) => f x
+ Predicate = @{: => Boolean}
+EOF
+      '(return
+        (apply3
+         (applyZ
+          let
+          (applyZ
+           (apply0 unless (group (apply1 (applyO paren (label : unwanted)) (apply1 (label : x) (alias (label : then) (label : replacement))))))
+           (applyZ = (apply3 (applyL (commaOP (applyK (apply1 is x) unwanted) ?) (applyL -> replacement)) (applyL (keyword else :) (applyL -> x))))))
+         (apply3
+          (applyZ
+           let
+           (applyZ
+            (apply0 is (group (apply1 (applyO paren (label : x)) (label : y))))
+            (applyZ
+             =
+             (pipe-2
+              y
+              (apply3
+               (applyK (apply1 (label :) Predicate) (applyO (keyword => :) (group (apply1 (applyO paren apply) (applyO (keyword to :) x)))))
+               (applyL (label :) (applyL => (apply1 (applyO x ==) y))))))))
+          (apply2
+           let
+           (apply3
+            (applyL (apply0 apply (group (apply1 (applyO paren (label : f)) (alias (label : to) (label : x))))) (applyL => (apply1 f x)))
+            (applyL Predicate (applyL = (apply0 @ (group (applyL (applyO brace (label :)) (applyL => Boolean))))))))))))

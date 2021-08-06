@@ -59,7 +59,7 @@ apply0 : expr0 e
        | OP e
 
 @e : INTEGER | DECIMAL
-   | string 
+   | string
    | ID
    | dot
    | group
