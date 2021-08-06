@@ -19,9 +19,7 @@ EOF
         (apply3
          (applyL
           let
-          (applyL
-           scores
-           (applyL = (group (applyK (applyK (apply0 brace 1) 2) 3)))))
+          (applyL scores (applyL = (group (applyK (applyK (applyO brace 1) 2) 3)))))
          (apply3
           (applyL
            let
@@ -46,3 +44,33 @@ EOF
 
 (test "let top10avg = {,: sort,: reverse,: first 10,: average}"
       '(return (applyL let (applyL top10avg (applyL = (group (pipe-1 (pipe-1 (pipe-1 (pipe-1 brace sort) reverse) (apply1 first 10)) average)))))))
+
+(test #<<EOF
+let prompt(:text String, :then:callback) => print text, readln, callback
+
+let unless(:unwanted :x :then:replacement) =
+ x== unwanted,? -> replacement
+ else: -> x
+
+prompt name = 'Your name: '
+println "Hello #{name,: unless '', then:'World'}"
+EOF
+      '(return
+        (apply3
+         (applyK
+          (applyK
+           (applyL
+            let
+            (applyL (apply0 prompt (group (applyK (apply1 (applyO paren (label : text)) String) (alias (label : then) (label : callback))))) (applyL => (apply1 print text))))
+           readln)
+          callback)
+         (apply3
+          (applyZ
+           let
+           (applyZ
+            (apply0 unless (group (apply1 (applyO paren (label : unwanted)) (apply1 (label : x) (alias (label : then) (label : replacement))))))
+            (applyZ = (apply3 (applyL (commaOP (apply1 (applyO x ==) unwanted) ?) (applyL -> replacement)) (applyL (keyword else :) (applyL -> x))))))
+          (apply3
+           (applyL prompt (applyL name (applyL = (string "Your name: "))))
+           (apply1 println (string "Hello " (group (applyK (pipe-1 (applyO brace name) (apply1 unless (string))) (applyO (keyword then :) (string "World")))))))))))
+      

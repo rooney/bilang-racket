@@ -33,11 +33,11 @@
     (cond [(> current-indent-level 0) (token-DEDENT)])]
    [#\space (token 'SPACE lexeme)]
    ["(" (list (token 'LPAREN lexeme)
-              (token 'PAREN 'paren))]
+              (token 'BPAREN 'paren))]
    ["[" (list (token 'LBRACKET lexeme)
-              (token 'BRACKET 'bracket))]
+              (token 'BBRACKET 'bracket))]
    ["{" (list (token-LBRACE)
-              (token 'BRACE 'brace))]
+              (token 'BBRACE 'brace))]
    [")" (token 'RPAREN lexeme)]
    ["]" (token 'RBRACKET lexeme)]
    ["}" (token-RBRACE)]
@@ -51,21 +51,15 @@
     (token 'ID (string->symbol lexeme))]
    [(:seq (:? "-") digits "." digits) (token 'DECIMAL (string->number lexeme))]
    [(:seq (:? "-") digits) (token 'INTEGER (string->number lexeme))]
-   [quots
-    (begin
-      (push-mode! quots-lexer)
-      (token 'QUOT lexeme))]
-   [quotd
-    (begin
-      (push-mode! quotd-lexer)
-      (token 'QUOT lexeme))]))
+   [quots (token-QUOT lexeme quots-lexer)]
+   [quotd (token-QUOT lexeme quotd-lexer)]))
 
 (define-macro (quot-lexer QUOT-TYPE)
   #'(lexer-srcloc
        [(:+ (:~ QUOT-TYPE "#")) (token 'STRING lexeme)]
        ["#" (token 'STRING lexeme)]
        ["#{" (list (token-LBRACE)
-                   (token 'BRACE 'brace))]
+                   (token 'BBRACE 'brace))]
        [QUOT-TYPE
         (begin
           (pop-mode!)
@@ -101,6 +95,10 @@
 (define (token-RBRACE)
   (pop-mode!)
   (token 'RBRACE ''RBRACE))
+
+(define (token-QUOT lexeme lexer)
+  (push-mode! lexer)
+  (token 'QUOT lexeme))
 
 (define pending-tokens '())
 (define (bilang-lexer ip)

@@ -1,7 +1,8 @@
 #lang brag
-return : /NEWLINE? expr3
 
+return : /NEWLINE? expr3
 @exp32 : apply3 | applyZ | apply2 | pipe-2
+
 @expr3 : apply3
        | exprZ (/SPACE | /NEWLINE | /INDENT /DEDENT)?
 @exprZ : applyZ
@@ -31,6 +32,7 @@ applyZ : packs /SPACE applyZ
        | keyop /SPACE apply2
        | keyop dent
 apply2 : exprK dent
+       | begin dent
 pipe-2 : piped dent
 applyL : keyop /SPACE exprK
        | packs /SPACE applyL
@@ -48,8 +50,10 @@ commaOP : comma OP
        | exprL /NEWLINE? /COMMA
 @piped : exprL /NEWLINE? /PIPE
        | exp32 /NEWLINE /PIPE
-pipe-0 : piped (OP|exprO)
-applyO : keyword exprO
+       | begin /PIPE
+pipe-0 : piped (exprO|keyop)
+applyO : begin (exprO|keyop)
+       | keyword (exprO|keyop)
        | expr0 OP
 apply0 : expr0 e
        | OP e
@@ -58,16 +62,19 @@ apply0 : expr0 e
    | string 
    | ID
    | dot
-   | group | PAREN | BRACE | BRACKET | undent
+   | group
+   | undent
 
-@subexpr : expr3
+@subexpr : begin
+         | expr3
          | dent
 @dent : /INDENT expr3 /DEDENT
 @undent : /BACKSLASH dent
 
-group : /LPAREN subexpr? /RPAREN
-      | /LBRACE subexpr? /RBRACE
-      | /LBRACKET subexpr? /RBRACKET
+@begin : BPAREN | BBRACE | BBRACKET
+group : /LPAREN subexpr /RPAREN
+      | /LBRACE subexpr /RBRACE
+      | /LBRACKET subexpr /RBRACKET
 
 alias : label label+
 @name : OP? ID OP?
