@@ -57,22 +57,43 @@ println "Hello #{name,: unless '', then:'World'}"
 EOF
       '(return
         (apply3
-         (applyK
-          (applyK
-           (applyL
-            let
-            (applyL (apply0 prompt (group (applyK (apply1 (applyO paren (label : text)) String) (alias (label : then) (label : callback))))) (applyL => (apply1 print text))))
-           readln)
-          callback)
+         (applyL
+          let
+          (applyL
+           (apply0
+            prompt
+            (group
+             (applyK
+              (apply1 (applyO paren (label : text)) String)
+              (alias (label : then) (label : callback)))))
+           (applyL => (applyK (applyK (apply1 print text) readln) callback))))
          (apply3
           (applyZ
            let
            (applyZ
-            (apply0 unless (group (apply1 (applyO paren (label : unwanted)) (apply1 (label : x) (alias (label : then) (label : replacement))))))
-            (applyZ = (apply3 (applyL (commaOP (apply1 (applyO x ==) unwanted) ?) (applyL -> replacement)) (applyL (keyword else :) (applyL -> x))))))
+            (apply0
+             unless
+             (group
+              (apply1
+               (applyO paren (label : unwanted))
+               (apply1 (label : x) (alias (label : then) (label : replacement))))))
+            (applyZ
+             =
+             (apply3
+              (applyL
+               (commaOP (apply1 (applyO x ==) unwanted) ?)
+               (applyL -> replacement))
+              (applyL (keyword else :) (applyL -> x))))))
           (apply3
            (applyL prompt (applyL name (applyL = (string "Your name: "))))
-           (apply1 println (string "Hello " (group (applyK (pipe-1 (applyO brace name) (apply1 unless (string))) (applyO (keyword then :) (string "World")))))))))))
+           (apply1
+            println
+            (string
+             "Hello "
+             (group
+              (applyK
+               (pipe-1 (applyO brace name) (apply1 unless (string)))
+               (applyO (keyword then :) (string "World")))))))))))
 
 (test #<<EOF
 let unless(:unwanted :x :then:replacement) =
