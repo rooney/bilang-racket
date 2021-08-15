@@ -1,104 +1,99 @@
 #lang brag
-
 return : /NEWLINE? expr4
-@exl23 : apply3 | applyQ2 | apply2 | applyP2 | applyQ1 | apptoQ | qwop
 
-@expr4 : exprK /(SPACE | NEWLINE | INDENT DEDENT)?
-@exprK : applyK3
-       | applyK2
-       | applyK1
-       | applyK
+@expr4 : exprE /(SPACE | NEWLINE | INDENT DEDENT)?
+@exprE : applyE3 | applyE2 | applyE1 | applyEQ
+       | pipeE2 | pipeE1 | pipeEO | pipeEQ
+       | enco
        | expr3
 @expr3 : apply3
        | expQ2
-@expQ2 : applyQ2
-       | applyP2
+@expQ2 : _Q_2
        | apply2
        | expQ1
-@expQ1 : applyQ1
-       | applyCQ1
-       | apptoQ
-       | qwop
-       | expP1
-@expP1 : applyP1
+@expQ1 : _Q_
+       | pipeQ
+       | applyCQ
        | expC1
 @expC1 : applyC1
-       | applyC
+       | pipe1
+       | co
        | expr1
 @expr1 : apply1
-       | expP0
-@expP0 : applyP0
+       | atomO
+@atomO : pipeO
        | exprO
 @exprO : applyO
-       | beginO
        | expr0
 @expr0 : apply0
        | label
        | alias
        | e
 
-applyK3 : applyK /NEWLINE expr3
-applyK2 : applyK dent
-applyK1 : applyK /SPACE expr1
-        | applyK1 /SPACE expr1
-@applyK : expnCOP | expnC
-expnCOP : expnC OP
-@expnC : expr4 /NEWLINE /COMMA
-apply3 : expQ2 /NEWLINE expr3
-applyQ2 : applyC /SPACE applyQ2
-        | any0 /SPACE applyQ2
+applyE3 : enco /NEWLINE expr3
+applyE2 : enco /SPACE _Q_2
+        | enco dent
+        | applyE1 dent
+pipeE2  : pipen /SPACE _Q_2
+        | pipen dent
+        | pipeE1 dent
+applyE1 : enco /SPACE expr1
+pipeE1  : pipen /SPACE expr1
+pipeEO  : pipen (exprO|qwop)
+pipeEQ  : pipen /SPACE _Q_
+applyEQ : enco /SPACE _Q_
+enco    : (applyE1|pipeE1) /COMMA OP?
+        | expr4 /NEWLINE /COMMA OP?
+pipen   : (applyE1|pipeE1) /COMMA-COLON
+        | expr4 /NEWLINE /COMMA-COLON
+apply3  : expQ2 /NEWLINE expr3
+        | (applyE1|applyE2|pipeE1|pipeE2) /NEWLINE expr3
+_Q_2    : qwop dent
         | qwop /SPACE apply2
-        | qwop dent
-applyP2 : piped dent
-apply2 : expP1 dent
-       | begin dent
-applyQ1 : qwop /SPACE (expC1|applyCQ1|qwop)
-        | any0 /SPACE applyQ1
-applyCQ1 : applyC /SPACE (applyQ1|apptoQ|qwop)
-apptoQ : expP0 /SPACE (apptoQ|qwop)
-@any0 : expP0 | qwop
-@expQ0 : exprO | qwop
-@qwop : keyword | OP
-applyP1 : piped /SPACE (apply1|expP0)
-applyC1 : applyP0 /SPACE expr1
-        | applyC /SPACE expr1
-applyC : expCOP | expC
-expCOP : expC OP
-@expC : (beginO|apply1|applyC1|applyP1|apptoQ|qwop) /COMMA
-apply1 : exprO /SPACE expr1
-applyP0 : piped expQ0
-@piped : expP1 /NEWLINE? /PIPE
-       | exl23 /NEWLINE /PIPE
-       | begin /PIPE
-beginO : begin expQ0
-applyO : keyword expQ0
-       | expr0 OP
-apply0 : expr0 e
-       | OP e
+        | (qwop|atomO) /SPACE _Q_2
+apply2  : (piped|co) /SPACE _Q_2
+        | (piped|expC1) dent
+; expQ1 :
+@_Q_    : _Qx | _Q
+_Qx     : qwop /SPACE expQ1
+        | atomO /SPACE _Qx
+@_Q     : xQ | qwop
+xQ      : atomO /SPACE _Q
+@qwop   : keyword | OP
+pipeQ   : piped /SPACE _Q_
+applyCQ : co /SPACE _Q_
+applyC1 : (co|pipeO) /SPACE expr1
+pipe1   : piped /SPACE expr1
+co      : (_Q|pipe1|applyC1|apply1|begin atomO) /COMMA (prop|OP)?
+piped   : (_Q|pipe1|applyC1|expr1) COMMA-COLON
+apply1  : exprO /SPACE expr1
+; atomO :
+pipeO   : piped (exprO|qwop)
+applyO  : begin (exprO|qwop)?
+        | keyword (exprO|qwop)
+        | expr0 OP
+apply0  : expr0 e
+        | OP e
 
 @e : INTEGER | DECIMAL
    | string
    | ID
-   | dot
+   | prop
    | group
    | undent
 
-@subexpr : begin
-         | expr4
-         | dent
-@dent : /INDENT /NEWLINE? expr4 /DEDENT
-@undent : /BACKSLASH dent
-
 @begin : BPAREN | BBRACE | BBRACKET
-group : /LPAREN subexpr /RPAREN
-      | /LBRACE subexpr /RBRACE
-      | /LBRACKET subexpr /RBRACKET
+group : /LPAREN expr4 /RPAREN
+      | /LBRACE expr4 /RBRACE
+      | /LBRACKET expr4 /RBRACKET
+@dent : /INDENT expr4 /DEDENT
+@undent : /BACKSLASH dent
 
 alias : label label+
 @name : OP? ID OP?
 label : COLON (OP|name)?
 keyword : (OP|name) COLON
-dot : /DOT name
+prop : /DOT name
 
 string : /QUOTE (STRING|group|NEWLINE)* /UNQUOTE
        | /QUOTE /INDENT (STRING|group|NEWLINE)* /DEDENT /UNQUOTE

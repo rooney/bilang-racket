@@ -17,33 +17,28 @@ println avg-score
 EOF
       '(return
         (apply3
-         (applyL
-          let
-          (applyL scores (applyL = (group (applyK (applyK (applyO brace 1) 2) 3)))))
+         (_Qx let (_Qx scores (_Qx = (group (applyC1 (co (applyC1 (co brace 1) 2)) 3)))))
          (apply3
-          (applyL
+          (_Qx
            let
-           (applyL
+           (_Qx
             avg-score
-            (applyL
+            (_Qx
              =
-             (applyK
-              (commaOP
-               (applyZ
-                (apply0 (apply0 scores (dot reduce)) (group paren))
-                (applyZ
-                 (applyO (keyword to :) 0)
-                 (applyZ
-                  ->
-                  (apply2
-                   (apply1 (alias (label : a) (label : sum)) (label : score))
-                   (apply1 (applyO sum +) score)))))
+             (applyE1
+              (enco
+               (_Q_2
+                (apply0 (apply0 scores (prop reduce)) (group (applyO paren)))
+                (_Q_2 (applyO (keyword to :) 0) (_Q_2 -> (apply2 (apply1 (alias (label : a) (label : sum)) (label : score)) (apply1 (applyO sum +) score)))))
                /)
-              (apply0 (apply0 scores (dot count)) (group paren))))))
+              (apply0 (apply0 scores (prop count)) (group (applyO paren)))))))
           (apply1 println avg-score)))))
 
 (test "let top10avg = {,: sort,: reverse,: first 10,: average}"
-      '(return (applyL let (applyL top10avg (applyL = (group (pipe-1 (pipe-1 (pipe-1 (pipe-1 brace sort) reverse) (apply1 first 10)) average)))))))
+      '(return
+        (_Qx
+         let
+         (_Qx top10avg (_Qx = (group (pipe1 (piped (pipe1 (piped (pipe1 (piped (pipe1 (piped (applyO brace) 'to) sort) 'to) reverse) 'to) (apply1 first 10)) 'to) average)))))))
 
 (test #<<EOF
 let prompt(:text String, :then:callback) => print text, readln, callback
@@ -57,43 +52,20 @@ println "Hello #{name,: unless '', then:'World'}"
 EOF
       '(return
         (apply3
-         (applyL
+         (_Qx
           let
-          (applyL
-           (apply0
-            prompt
-            (group
-             (applyK
-              (apply1 (applyO paren (label : text)) String)
-              (alias (label : then) (label : callback)))))
-           (applyL => (applyK (applyK (apply1 print text) readln) callback))))
+          (_Qx
+           (apply0 prompt (group (applyC1 (co (apply1 (applyO paren (label : text)) String)) (alias (label : then) (label : callback)))))
+           (_Qx => (applyC1 (co (applyC1 (co (apply1 print text)) readln)) callback))))
          (apply3
-          (applyZ
+          (_Q_2
            let
-           (applyZ
-            (apply0
-             unless
-             (group
-              (apply1
-               (applyO paren (label : unwanted))
-               (apply1 (label : x) (alias (label : then) (label : replacement))))))
-            (applyZ
-             =
-             (apply3
-              (applyL
-               (commaOP (apply1 (applyO x ==) unwanted) ?)
-               (applyL -> replacement))
-              (applyL (keyword else :) (applyL -> x))))))
+           (_Q_2
+            (apply0 unless (group (apply1 (applyO paren (label : unwanted)) (apply1 (label : x) (alias (label : then) (label : replacement))))))
+            (_Q_2 = (apply3 (applyCQ (co (apply1 (applyO x ==) unwanted) ?) (_Qx -> replacement)) (_Qx (keyword else :) (_Qx -> x))))))
           (apply3
-           (applyL prompt (applyL name (applyL = (string "Your name: "))))
-           (apply1
-            println
-            (string
-             "Hello "
-             (group
-              (applyK
-               (pipe-1 (applyO brace name) (apply1 unless (string)))
-               (applyO (keyword then :) (string "World")))))))))))
+           (_Qx prompt (_Qx name (_Qx = (string "Your name: "))))
+           (apply1 println (string "Hello " (group (applyC1 (co (pipe1 (piped (applyO brace name) 'to) (apply1 unless (string)))) (applyO (keyword then :) (string "World")))))))))))
 
 (test #<<EOF
 let unless(:unwanted :x :then:replacement) =
@@ -111,25 +83,25 @@ let
 EOF
       '(return
         (apply3
-         (applyZ
+         (_Q_2
           let
-          (applyZ
+          (_Q_2
            (apply0 unless (group (apply1 (applyO paren (label : unwanted)) (apply1 (label : x) (alias (label : then) (label : replacement))))))
-           (applyZ = (apply3 (applyL (commaOP (applyK (apply1 is x) unwanted) ?) (applyL -> replacement)) (applyL (keyword else :) (applyL -> x))))))
+           (_Q_2 = (apply3 (applyCQ (co (applyC1 (co (apply1 is x)) unwanted) ?) (_Qx -> replacement)) (_Qx (keyword else :) (_Qx -> x))))))
          (apply3
-          (applyZ
+          (_Q_2
            let
-           (applyZ
+           (_Q_2
             (apply0 is (group (apply1 (applyO paren (label : x)) (label : y))))
-            (applyZ
+            (_Q_2
              =
-             (pipe-2
-              y
+             (apply2
+              (piped y 'to)
               (apply3
-               (applyK (apply1 (label :) Predicate) (applyO (keyword => :) (group (apply1 (applyO paren apply) (applyO (keyword to :) x)))))
-               (applyL (label :) (applyL => (apply1 (applyO x ==) y))))))))
+               (applyC1 (co (apply1 (label :) Predicate)) (applyO (keyword => :) (group (apply1 (applyO paren apply) (applyO (keyword to :) x)))))
+               (_Qx (label :) (_Qx => (apply1 (applyO x ==) y))))))))
           (apply2
            let
            (apply3
-            (applyL (apply0 apply (group (apply1 (applyO paren (label : f)) (alias (label : to) (label : x))))) (applyL => (apply1 f x)))
-            (applyL Predicate (applyL = (apply0 @ (group (applyL (applyO brace (label :)) (applyL => Boolean))))))))))))
+            (_Qx (apply0 apply (group (apply1 (applyO paren (label : f)) (alias (label : to) (label : x))))) (_Qx => (apply1 f x)))
+            (_Qx Predicate (_Qx = (apply0 @ (group (_Qx (applyO brace (label :)) (_Qx => Boolean))))))))))))

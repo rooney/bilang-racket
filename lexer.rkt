@@ -42,7 +42,7 @@
    ["]" (token 'RBRACKET lexeme)]
    ["}" (token-RBRACE)]
    ["\\" (token 'BACKSLASH lexeme)]
-   [",:" (token 'PIPE lexeme)]
+   [",:" (token 'COMMA-COLON ''to)]
    ["," (token 'COMMA lexeme)]
    [":" (token 'COLON ':)]
    ["." (token 'DOT lexeme)]
