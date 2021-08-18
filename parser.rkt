@@ -1,9 +1,8 @@
 #lang brag
 return : /NEWLINE? expr4
 
-@expr4 : exprE /(SPACE | NEWLINE | INDENT DEDENT)?
-@exprE : applyE3 | applyE2 | applyE1 | applyEQ
-       | pipeE2 | pipeE1 | pipeEO | pipeEQ
+@expr4 : exprE (/SPACE|/NEWLINE|/INDENT/DEDENT)?
+@exprE : applyE3 | applyEZ | applyE1 | applyEO
        | enco
        | expr3
 @expr3 : apply3
@@ -12,16 +11,14 @@ return : /NEWLINE? expr4
        | apply2
        | expQ1
 @expQ1 : _Q_
-       | pipeQ
        | applyCQ
        | expC1
 @expC1 : applyC1
-       | pipe1
-       | co
+       | eco
        | expr1
 @expr1 : apply1
-       | atomO
-@atomO : pipeO
+       | expCO
+@expCO : applyCO
        | exprO
 @exprO : applyO
        | expr0
@@ -31,44 +28,30 @@ return : /NEWLINE? expr4
        | e
 
 applyE3 : enco /NEWLINE expr3
-applyE2 : enco /SPACE _Q_2
-        | enco dent
-        | applyE1 dent
-pipeE2  : pipen /SPACE _Q_2
-        | pipen dent
-        | pipeE1 dent
-applyE1 : enco /SPACE expr1
-pipeE1  : pipen /SPACE expr1
-pipeEO  : pipen (exprO|qwop)
-pipeEQ  : pipen /SPACE _Q_
-applyEQ : enco /SPACE _Q_
-enco    : (applyE1|pipeE1) /COMMA OP?
-        | expr4 /NEWLINE /COMMA OP?
-pipen   : (applyE1|pipeE1) /COMMA-COLON
-        | expr4 /NEWLINE /COMMA-COLON
-apply3  : expQ2 /NEWLINE expr3
-        | (applyE1|applyE2|pipeE1|pipeE2) /NEWLINE expr3
+applyEZ : enco /SPACE (_Q_|_Q_2)
+        | (enco|applyE1) dent
+applyE1 : (enco|applyEO) /SPACE expr1
+applyEO : enco (exprO|qwop)
+@enco   : exprE /NEWLINE co
+        | (applyEO|applyE1) co
+apply3  : (applyEO|applyE1|applyEZ|expQ2) /NEWLINE expr3
 _Q_2    : qwop dent
         | qwop /SPACE apply2
-        | (qwop|atomO) /SPACE _Q_2
-apply2  : (piped|co) /SPACE _Q_2
-        | (piped|expC1) dent
-; expQ1 :
+        | (qwop|expCO) /SPACE _Q_2
+apply2  : eco /SPACE _Q_2
+        | (eco|expC1) dent
 @_Q_    : _Qx | _Q
 _Qx     : qwop /SPACE expQ1
-        | atomO /SPACE _Qx
+        | expCO /SPACE _Qx
 @_Q     : xQ | qwop
-xQ      : atomO /SPACE _Q
+xQ      : expCO /SPACE _Q
 @qwop   : keyword | OP
-pipeQ   : piped /SPACE _Q_
-applyCQ : co /SPACE _Q_
-applyC1 : (co|pipeO) /SPACE expr1
-pipe1   : piped /SPACE expr1
-co      : (_Q|pipe1|applyC1|apply1|begin atomO) /COMMA (prop|OP)?
-piped   : (_Q|pipe1|applyC1|expr1) COMMA-COLON
+applyCQ : eco /SPACE _Q_
+applyC1 : (eco|applyCO) /SPACE expr1
+@eco    : (_Q|applyC1|expr1) co
+@co     : /COMMA | COMMA-COLON
 apply1  : exprO /SPACE expr1
-; atomO :
-pipeO   : piped (exprO|qwop)
+applyCO : eco (exprO|qwop)
 applyO  : begin (exprO|qwop)?
         | keyword (exprO|qwop)
         | expr0 OP
