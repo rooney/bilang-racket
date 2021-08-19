@@ -1,7 +1,7 @@
 #lang brag
 return : /NEWLINE? expr4
 
-@expr4 : exprE (/SPACE|/NEWLINE|/INDENT/DEDENT)?
+@expr4 : exprE (/space|/NEWLINE|/INDENT/DEDENT)?
 @exprE : applyE3 | applyEZ | applyE1 | applyEO
        | enco
        | expr3
@@ -28,29 +28,29 @@ return : /NEWLINE? expr4
        | e
 
 applyE3 : enco /NEWLINE expr3
-applyEZ : enco /SPACE (_Q_|_Q_2)
+applyEZ : enco /space (_Q_|_Q_2)
         | (enco|applyE1) dent
-applyE1 : (enco|applyEO) /SPACE expr1
+applyE1 : (enco|applyEO) /space expr1
 applyEO : enco (exprO|qwop)
 @enco   : exprE /NEWLINE co
         | (applyEO|applyE1) co
 apply3  : (applyEO|applyE1|applyEZ|expQ2) /NEWLINE expr3
 _Q_2    : qwop dent
-        | qwop /SPACE apply2
-        | (qwop|expCO) /SPACE _Q_2
-apply2  : eco /SPACE _Q_2
+        | qwop /space apply2
+        | (qwop|expCO) /space _Q_2
+apply2  : eco /space _Q_2
         | (eco|expC1) dent
 @_Q_    : _Qx | _Q
-_Qx     : qwop /SPACE expQ1
-        | expCO /SPACE _Qx
+_Qx     : qwop /space expQ1
+        | expCO /space _Qx
 @_Q     : xQ | qwop
-xQ      : expCO /SPACE _Q
+xQ      : expCO /space _Q
 @qwop   : keyword | OP
-applyCQ : eco /SPACE _Q_
-applyC1 : (eco|applyCO) /SPACE expr1
+applyCQ : eco /space _Q_
+applyC1 : (eco|applyCO) /space expr1
 @eco    : (_Q|applyC1|expr1) co
 @co     : /COMMA | COMMA-COLON
-apply1  : exprO /SPACE expr1
+apply1  : exprO /space expr1
 applyCO : eco (exprO|qwop)
 applyO  : begin (exprO|qwop)?
         | keyword (exprO|qwop)
@@ -71,6 +71,7 @@ group : /LPAREN expr4 /RPAREN
       | /LBRACKET expr4 /RBRACKET
 @dent : /INDENT expr4 /DEDENT
 @undent : /BACKSLASH dent
+@space : /BACKSLASH /NEWLINE+ | /SPACE
 
 alias : label label+
 @name : OP? ID OP?
@@ -80,3 +81,4 @@ prop : /DOT name
 
 string : /QUOTE (STRING|group|NEWLINE)* /UNQUOTE
        | /QUOTE /INDENT (STRING|group|NEWLINE)* /DEDENT /UNQUOTE
+
