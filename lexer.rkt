@@ -5,31 +5,34 @@
   (alpha (:+ alphabetic))
   (alnum (:+ (:or alphabetic numeric)))
   (digits (:+ (char-set "0123456789")))
-  (newline (:seq (:* (char-set " \t"))
-                 (:or "\r\n" "\n")))
+  (newline (:seq spacetabs? (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
   (quoted "\"")
-  (quotes "'"))
+  (quotes "'")
+  (semi (:+ (:seq spacetabs? ";" spacetabs?)))
+  (spacetabs? (:* (char-set " \t"))))
 
 (define main-lexer
   (lexer-srcloc
-   [nextloc (let* ([next-level (add1 current-indent-level)]
-                   [indent-amount (calc-indent lexeme)]
-                   [excess-amount (- indent-amount next-level)])
-              (cond
-                [(= indent-amount current-indent-level) token-NEWLINE]
-                [(> indent-amount current-indent-level)
-                 (cond [(= indent-amount next-level) (token-INDENT)]
-                       [else (raise-read-error "too much indentation"
-                                               (file-path) 
-                                               (position-line end-pos)
-                                               next-level
-                                               (- (position-offset end-pos) excess-amount)
-                                               excess-amount)])]
-                [(< indent-amount current-indent-level)
-                 (append (build-list (- current-indent-level indent-amount)
-                                     (lambda _ (token-DEDENT)))
-                         (list token-NEWLINE))]))]
+   [semi token-NEWLINE]
+   [(:+ (:or nextloc semi))
+    (let* ([next-level (add1 current-indent-level)]
+           [indent-amount (calc-indent lexeme)]
+           [excess-amount (- indent-amount next-level)])
+      (cond
+        [(= indent-amount current-indent-level) token-NEWLINE]
+        [(> indent-amount current-indent-level)
+         (cond [(= indent-amount next-level) (token-INDENT)]
+               [else (raise-read-error "too much indentation"
+                                       (file-path) 
+                                       (position-line end-pos)
+                                       next-level
+                                       (- (position-offset end-pos) excess-amount)
+                                       excess-amount)])]
+        [(< indent-amount current-indent-level)
+         (append (build-list (- current-indent-level indent-amount)
+                             (lambda _ (token-DEDENT)))
+                 (list token-NEWLINE))]))]
    [(eof) (cond [(> current-indent-level 0) (token-DEDENT)])]
    [(:or (:+ #\space) #\tab) (token 'SPACE lexeme)]
    ["(" (list (token 'LPAREN lexeme)
@@ -93,7 +96,10 @@
             (list (token 'UNQUOTE ''UNQUOTE))))
 
 (define (calc-indent lexeme)
-  (string-length (last (string-split lexeme "\n" #:trim? #f))))
+  (define last-line (last (string-split lexeme "\n" #:trim? #f)))
+  (if (equal? (string-trim last-line) ";")
+      current-indent-level
+      (string-length last-line)))
 
 (define-macro (expect-indent EXPECTED-LEVEL)
   #'(let [(start-line (position-line start-pos))
