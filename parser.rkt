@@ -49,7 +49,7 @@ xQ      : expCO /space _Q
 applyCQ : eco /space _Q_
 applyC1 : (eco|applyCO) /space expr1
 @eco    : (_Q|applyC1|expr1) co
-@co     : /COMMA | COMMA-COLON
+@co     : comma | PIPE
 apply1  : exprO /space expr1
 applyCO : eco (exprO|qwop)
 applyO  : begin (exprO|qwop)?
@@ -71,14 +71,16 @@ group : /LPAREN expr4 /RPAREN
       | /LBRACKET expr4 /RBRACKET
 @dent : /INDENT expr4 /DEDENT
 @undent : /BACKSLASH dent
-@space : /BACKSLASH /NEWLINE+ | /SPACE
+@space : /SPACE (/BACKSLASH /NEWLINE)?
+@comma : /COMMA | /BACKSLASH /NEWLINE 
 
 alias : label label+
 @name : OP? ID OP?
 label : COLON (OP|name)?
 keyword : (OP|name) COLON
-prop : /DOT name
+prop : /DOT (name|group)
 
-string : /QUOTE (STRING|group|NEWLINE)* /UNQUOTE
+string : /QUOTE (STRING|group)* /UNQUOTE
        | /QUOTE /INDENT (STRING|group|NEWLINE)* /DEDENT /UNQUOTE
+       | /MACRO /QUOTE /INDENT (STRING|group|NEWLINE)* /DEDENT
 

@@ -59,15 +59,63 @@ EOF
              piped-to:
              average)))))))
 
+
+(test #<<EOF
+.grade(:) =
+	.attendance> minimum-attendance, else: -> 'F'
+	.test-results.count()> 0, else: -> 'N/A'
+	.test-results.map() {.score},: max,:
+		: {>= 90} => 'A'
+		: {>= 75} => 'B'
+		: {>= 60} => 'C'
+		:         => 'D'
+EOF
+      '(return
+        (_Q_2
+         (apply0 (prop grade) (group (applyO paren (label :))))
+         (_Q_2
+          =
+          (apply3
+           (applyCQ (apply1 (prop attendance >) minimum-attendance) (_Qx (keyword else :) (_Qx -> (string "F"))))
+           (apply3
+            (applyCQ (apply1 (applyO (apply0 (apply0 (prop test-results) (prop count)) (group (applyO paren))) >) 0) (_Qx (keyword else :) (_Qx -> (string "N/A"))))
+            (apply2
+             (applyC1 (apply1 (apply0 (apply0 (prop test-results) (prop map)) (group (applyO paren))) (group (applyO brace (prop score)))) piped-to: max)
+             piped-to:
+             (apply3
+              (_Qx (label :) (_Qx (group (apply1 (applyO brace >=) 90)) (_Qx => (string "A"))))
+              (apply3
+               (_Qx (label :) (_Qx (group (apply1 (applyO brace >=) 75)) (_Qx => (string "B"))))
+               (apply3 (_Qx (label :) (_Qx (group (apply1 (applyO brace >=) 60)) (_Qx => (string "C")))) (_Qx (label :) (_Qx => (string "D")))))))))))))
+
+(test "let top10avg = {,: sort,: reverse,: first 10,: average}"
+      '(return
+        (_Qx
+         let
+         (_Qx
+          top10avg
+          (_Qx
+           =
+           (group
+            (applyC1
+             (applyC1
+              (applyC1 (applyC1 (applyO brace) piped-to: sort) piped-to: reverse)
+              piped-to:
+              (apply1 first 10))
+             piped-to:
+             average)))))))
+
+
+
 (test #<<EOF
 let prompt(:text String, :then:callback) => print text, readln, callback
 
-let unless(:unwanted :x :then:replacement) =
+let unless(:unwanted :x :else:replacement) =
 	x== unwanted,? -> replacement
 	else: -> x
 
 prompt name = 'Your name: '
-println "Hello #{name,: unless '', then:'World'}"
+println "Hello #!{name,: unless '', else:'World'}"
 EOF
       '(return
         (apply3
@@ -90,7 +138,7 @@ EOF
              (group
               (apply1
                (applyO paren (label : unwanted))
-               (apply1 (label : x) (alias (label : then) (label : replacement))))))
+               (apply1 (label : x) (alias (label : else) (label : replacement))))))
             (_Q_2
              =
              (apply3
@@ -105,10 +153,10 @@ EOF
              (group
               (applyC1
                (applyC1 (applyO brace name) piped-to: (apply1 unless (string)))
-               (applyO (keyword then :) (string "World")))))))))))
+               (applyO (keyword else :) (string "World")))))))))))
 
 (test #<<EOF
-let unless(:unwanted :x :then:replacement) =
+let unless(:unwanted :x :else:replacement) =
 	is x, unwanted,? -> replacement
 	else: -> x
 
@@ -131,7 +179,7 @@ EOF
             (group
              (apply1
               (applyO paren (label : unwanted))
-              (apply1 (label : x) (alias (label : then) (label : replacement))))))
+              (apply1 (label : x) (alias (label : else) (label : replacement))))))
            (_Q_2
             =
             (apply3
@@ -170,3 +218,57 @@ EOF
               (apply0
                @
                (group (_Qx (applyO brace (label :)) (_Qx => Boolean))))))))))))
+
+(test #<<EOF
+progress.complete? '
+	<p class='#!{
+		sql #!'
+			SELECT 'name' FROM 'themes'
+			WHERE 'user_id' = '#!{user.id}'
+		, -> :theme
+			'theme-#!{theme.name}'
+		else:
+			'default'
+	}'>
+		Word,
+
+		Sentence One.
+		Sentence Two.
+	</p>
+'
+else: #!"
+	<div class="loading" data-progress=
+		"#!{progress%}%"/>
+EOF
+      '(return
+        (apply3
+         (apply1
+          (apply0 progress (prop complete ?))
+          (string
+           "<p class="
+           "'"
+           (group
+            (apply2
+             (applyO brace)
+             (apply3
+              (applyEZ
+               (apply1 sql (string "SELECT 'name' FROM 'themes'" "\n" "WHERE 'user_id' = '" (group (applyO brace (apply0 user (prop id)))) "'" "\n"))
+               (_Q_2 -> (apply2 (label : theme) (string "theme-" (group (applyO brace (apply0 theme (prop name))))))))
+              (_Q_2 (keyword else :) (string "default")))))
+           "'"
+           ">"
+           "\n"
+           "\t"
+           "Word,"
+           "\n"
+           "\n"
+           "\t"
+           "Sentence One."
+           "\n"
+           "\t"
+           "Sentence Two."
+           "\n"
+           "</p>"))
+         (_Qx (keyword else :) (string "<div class=\"loading\" data-progress=" "\n" "\t" "\"" (group (applyO brace (applyO progress %))) "%\"/>")))))
+
+

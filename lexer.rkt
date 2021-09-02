@@ -5,16 +5,44 @@
   (alpha (:+ alphabetic))
   (alnum (:+ (:or alphabetic numeric)))
   (digits (:+ (char-set "0123456789")))
+  (identifier (:seq alpha (:* (:seq (:* "-") alnum))))
+  (newline-char (char-set "\r\n"))
   (newline (:seq spacetabs? (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
+  (operator (:or ".." (:+ (char-set "+-*/=><?&|`~@$%^#!_"))))
   (quoted "\"")
   (quotes "'")
   (semi (:+ (:seq spacetabs? ";" spacetabs?)))
-  (spacetabs? (:* (char-set " \t"))))
+  (space/tab (:or #\space #\tab))
+  (spacetabs? (:* space/tab))
+  (until-newline (:+ (:~ newline-char))))
+
+(define-macro (base-lexer+ CUSTOM-RULES ...)
+  #'(lexer-srcloc
+     CUSTOM-RULES ...
+     [identifier (token 'ID (string->symbol lexeme))]
+     [operator (token 'OP (string->symbol lexeme))]
+     ["(" (token-LPAREN)]
+     ["{" (token-LBRACE)]
+     ["[" token-LBRACKET]
+     [")" (token-RPAREN)]
+     ["}" (token-RBRACE)]
+     ["]" token-RBRACKET]
+     ["\\" (token 'BACKSLASH lexeme)]
+     [",:" (token 'PIPE 'piped-to:)]
+     ["," (token 'COMMA lexeme)]
+     [":" (token 'COLON ':)]
+     ["." (token 'DOT lexeme)]
+     [(:seq (:? "-") digits "." digits) (token 'DECIMAL (string->number lexeme))]
+     [(:seq (:? "-") digits)            (token 'INTEGER (string->number lexeme))]
+     [(:seq quotes nextloc) (multi-line-string quotes)]
+     [(:seq quoted nextloc) (multi-line-string quoted)]
+     [quotes (single-line-string quotes)]
+     [quoted (single-line-string quoted)]
+     [(eof) (close-indents)]))
 
 (define main-lexer
-  (lexer-srcloc
-   [semi token-NEWLINE]
+  (base-lexer+
    [(:+ (:or nextloc semi))
     (let* ([next-level (add1 current-indent-level)]
            [indent-amount (calc-indent lexeme)]
@@ -33,86 +61,95 @@
          (append (build-list (- current-indent-level indent-amount)
                              (lambda _ (token-DEDENT)))
                  (list token-NEWLINE))]))]
-   [(eof) (cond [(> current-indent-level 0) (token-DEDENT)])]
-   [(:or (:+ #\space) #\tab) (token 'SPACE lexeme)]
-   ["(" (list (token 'LPAREN lexeme)
-              (token 'BPAREN 'paren))]
-   ["[" (list (token 'LBRACKET lexeme)
-              (token 'BBRACKET 'bracket))]
-   ["{" (list (token-LBRACE)
-              (token 'BBRACE 'brace))]
-   [")" (token 'RPAREN lexeme)]
-   ["]" (token 'RBRACKET lexeme)]
-   ["}" (token-RBRACE)]
-   ["\\" (token 'BACKSLASH lexeme)]
-   [",:" (token 'COMMA-COLON 'piped-to:)]
-   ["," (token 'COMMA lexeme)]
-   [":" (token 'COLON ':)]
-   ["." (token 'DOT lexeme)]
-   [(:+ (char-set "+-*/=><?`~@$%^&|"))      (token 'OP (string->symbol lexeme))]
-   [(:seq alpha (:* (:seq (:* "-") alnum))) (token 'ID (string->symbol lexeme))]
-   [(:seq (:? "-") digits "." digits)       (token 'DECIMAL (string->number lexeme))]
-   [(:seq (:? "-") digits)                  (token 'INTEGER (string->number lexeme))]
-   [(:or (:seq quotes nextloc quotes)
-         (:seq quoted nextloc quoted)) (blank-string)]
-   [(:seq quotes nextloc) (multiline-string quotes)]
-   [(:seq quoted nextloc) (multiline-string quoted)]
-   [quotes (str quotes)]
-   [quoted (str quoted)]))
+   [semi token-NEWLINE]
+   [(:or (:+ #\space) (:+ #\tab)) (token 'SPACE lexeme)]
+   [(:seq "#!" (:or quoted quotes) nextloc) (list (token 'MACRO lexeme)
+                                                  (token-QUOTE block-lexer)
+                                                  (token-INDENT))]
+   ["#!{" (cons (token 'MACRO lexeme) (token-LBRACE))]
+   ["#!" (token-MACRO)]))
 
-(define-macro (string-lexer QUOTCHAR CHARS ON-NEWLINE END-RULE)
-  #'(lexer-srcloc ["#{" (list (token-LBRACE) (token 'BBRACE 'brace))]
-                  ["#" (token 'STRING lexeme)]
-                  [(:+ CHARS) (token 'STRING lexeme)]
-                  [nextloc ON-NEWLINE]
-                  END-RULE))
+(define-macro (string-lexer QUOTCHAR CUSTOM-RULES ...)
+  #'(lexer-srcloc CUSTOM-RULES ...
+                  ["#!{" (token-LBRACE)]
+                  [(:+ (:~ "#" newline-char QUOTCHAR)) (token 'STRING lexeme)]
+                  [any-char (token 'STRING lexeme)]
+                  [(eof) (unterminated-string)]))
 
-(define-macro (str QUOTCHAR)
-  #'(token-QUOTE
-     (string-lexer QUOTCHAR
-                   (:~ QUOTCHAR "#" "\n")
-                   (raise-read-error "unterminated string"
-                                     (file-path) 
-                                     (position-line start-pos)
-                                     (position-col start-pos)
-                                     (position-offset start-pos)
-                                     (+ 0 (string-length lexeme)))
-                   [QUOTCHAR (token-UNQUOTE)])))
+(define block-lexer
+  (string-lexer #\null
+                [nextloc (append (cons token-NEWLINE (keep-indent))
+                                 (append-if (equal? active-lexer main-lexer)
+                                            token-NEWLINE))]
+                [(eof) (close-indents)]))
 
-(define-macro (multiline-string QUOTCHAR)
-  #'(let [(extra-lines (expect-indent (add1 current-indent-level)))
-          (multiline-string-lexer 
-           (string-lexer QUOTCHAR
-                         (:~ "#" "\n")
-                         (cons token-NEWLINE (expect-indent current-indent-level))
-                         [(:seq nextloc QUOTCHAR)
-                          (let [(extra-lines (expect-indent current-indent-level))]
-                            (append extra-lines (list (token-DEDENT) (token-UNQUOTE))))]))]
-      (append (list (token-QUOTE multiline-string-lexer) (token-INDENT)) extra-lines)))
+(define-macro (single-line-string QUOTCHAR)
+  #'(token-QUOTE (string-lexer QUOTCHAR
+                               [newline-char (unterminated-string)]
+                               [QUOTCHAR (token-UNQUOTE)])))
 
-(define-macro (blank-string)
-  #'(append (list (token 'QUOTE ''QUOTE))
-            (expect-indent (add1 current-indent-level))
-            (list (token 'UNQUOTE ''UNQUOTE))))
+(define-macro (multi-line-string QUOTCHAR)
+  #'(let* ([unquote-lexer 
+            (lexer-srcloc [QUOTCHAR (token-UNQUOTE)]
+                          [(:+ #\space) (raise-read-error "expected tabs, found spaces"
+                                                          (file-path)
+                                                          (position-line start-pos)
+                                                          (position-col start-pos)
+                                                          (position-offset start-pos)
+                                                          (string-length lexeme))]
+                          [any-char (unterminated-string)]
+                          [(eof) (unterminated-string)])]
+           [newline-on (lambda (tokens)
+                         (if (equal? active-lexer unquote-lexer)
+                             tokens
+                             (cons token-NEWLINE tokens)))])
+      (push-mode! unquote-lexer)
+      (append (list (token-QUOTE (string-lexer QUOTCHAR
+                                               [nextloc (newline-on (keep-indent))]))
+                    (token-INDENT))
+              (keep-indent))))
+
+(define-macro (unterminated-string)
+  #'(raise-read-error "unterminated string (missing closing quote)"
+                      (file-path) 
+                      (position-line start-pos)
+                      (position-col start-pos)
+                      (position-offset start-pos)
+                      (if (string? lexeme) (string-length lexeme) 0)))
+
+(define-macro (concat-if CONDITION LIST)
+  #'(if CONDITION LIST '()))
+
+(define-macro (append-if CONDITION ITEM)
+  #'(if CONDITION (list ITEM) '()))
+
+(define-macro (keep-indent)
+  #'(let* ([tabs (regexp-match (pregexp (format "^\t{~a}(\t+)" current-indent-level))
+                               (lastline lexeme))]
+           [indent-amount (calc-indent lexeme)])
+      (append (make-list (sub1 (- (position-line end-pos) (position-line start-pos)))
+                         token-NEWLINE)
+              (append-if tabs (token 'STRING (cadr tabs)))
+              (concat-if (< indent-amount current-indent-level)
+                         (begin (pop-mode!)
+                                (build-list (- current-indent-level indent-amount)
+                                            (lambda _ (token-DEDENT))))))))
 
 (define (calc-indent lexeme)
-  (define last-line (last (string-split lexeme "\n" #:trim? #f)))
-  (if (equal? (string-trim last-line) ";")
+  (define last-line (lastline lexeme))
+  (if (string-contains? last-line ";")
       current-indent-level
       (string-length last-line)))
 
-(define-macro (expect-indent EXPECTED-LEVEL)
-  #'(let [(start-line (position-line start-pos))
-          (end-line (position-line end-pos))
-          (indent-amount (calc-indent lexeme))]
-      (if (= indent-amount EXPECTED-LEVEL)
-          (make-list (sub1 (- end-line start-line)) token-NEWLINE)
-          (raise-read-error "wrong indentation level"
-                            (file-path) 
-                            end-line
-                            1
-                            (- (position-offset end-pos) indent-amount)
-                            indent-amount))))
+(define (close-indents)
+  (cond [(> current-indent-level 0) 
+         (build-list current-indent-level (lambda _ (token-DEDENT)))]))
+
+(define (lastline lexeme)
+  (last (string-split lexeme "\n" #:trim? #f)))
+
+(define (rewind! port lexeme)
+  (file-position port (- (file-position port) (string-length lexeme))))
 
 (define active-lexer main-lexer)
 (define modes '())
@@ -134,38 +171,108 @@
   (set! current-indent-level (sub1 current-indent-level))  
   (token 'DEDENT ''DEDENT))
 
+(define token-NEWLINE
+  (token 'NEWLINE "\n"))
+
+(define (token-LPAREN)
+  (push-mode! main-lexer)
+  (list (token 'LPAREN ''LPAREN)
+        (token 'BPAREN 'paren)))
+
 (define (token-LBRACE)
   (push-mode! main-lexer)
-  (token 'LBRACE ''LBRACE))
+  (list (token 'LBRACE ''LBRACE)
+        (token 'BBRACE 'brace)))
+
+(define token-LBRACKET
+  (list (token 'LBRACKET ''LBRACKET)
+        (token 'BBRACKET 'bracket)))
+
+(define token-RBRACKET
+  (token 'RBRACKET ''RBRACKET))
 
 (define (token-RBRACE)
   (pop-mode!)
   (token 'RBRACE ''RBRACE))
 
-(define (token-QUOTE lexer)
-  (push-mode! lexer)
-  (token 'QUOTE ''QUOTE))
+(define (token-RPAREN)
+  (pop-mode!)
+  (token 'RPAREN ''RPAREN))
+
+(define-macro (token-QUOTE LEXER)
+  #'(begin
+      (push-mode! LEXER)
+      (token 'QUOTE ''QUOTE)))
 
 (define (token-UNQUOTE)
   (pop-mode!)
   (token 'UNQUOTE ''UNQUOTE))
 
-(define token-NEWLINE
-  (token 'NEWLINE "\n"))
+(define (token-MACRO)
+  (push-mode! (match (toktype last-token)
+                [or 'NEWLINE 'INDENT block-macro-lexer]
+                ['BPAREN paren-macro-lexer]
+                [_ std-macro-lexer]))
+  (token 'MACRO ''MACRO))
+
+(define paren-macro-lexer
+  (lexer-srcloc
+   [(:+ (:~ ")")) (token 'STRING lexeme)]
+   [")" (begin (pop-mode!) (token-RPAREN))]))
+
+(define std-macro-lexer
+  (lexer-srcloc
+   [until-newline (token 'STDMAC lexeme)]
+   [nextloc (let* ([next-level (add1 current-indent-level)]
+                   [indent-amount (calc-indent lexeme)]
+                   [excess-amount (- indent-amount next-level)])
+              (cond
+                [(= indent-amount current-indent-level) (begin (pop-mode!) token-NEWLINE)]
+                [(> indent-amount current-indent-level)
+                 (token 'STDMAC lexeme)]
+                [(< indent-amount current-indent-level)
+                 (begin
+                   (pop-mode!)
+                   (append (build-list (- current-indent-level indent-amount)
+                                       (lambda _ (token-DEDENT)))
+                           (list token-NEWLINE)))]))]))
+
+(define block-macro-lexer
+  (lexer-srcloc
+   [until-newline (token 'MACBODY lexeme)]
+   [nextloc (let* ([next-level (add1 current-indent-level)]
+                   [indent-amount (calc-indent lexeme)]
+                   [excess-amount (- indent-amount next-level)])
+              (cond
+                [(= indent-amount current-indent-level) (token 'MACBODY lexeme)]
+                [(> indent-amount current-indent-level)
+                 (token 'MACBODY lexeme)]
+                [(< indent-amount current-indent-level)
+                 (begin
+                   (pop-mode!)
+                   (append (build-list (- current-indent-level indent-amount)
+                                       (lambda _ (token-DEDENT)))
+                           (list token-NEWLINE)))]))]))
 
 (define pending-tokens '())
+(define last-token void)
+(define (toktype tok)
+  (token-struct-type (srcloc-token-token tok)))
+
 (define (bilang-lexer ip)
-  (if (empty? pending-tokens)
-      (let* ([produce (active-lexer ip)]
-             [tokens (and (srcloc-token? produce) 
-                          (srcloc-token-token produce))])
-        (if (list? tokens)
-            (let* ([t-loc (srcloc-token-srcloc produce)]
-                   [prods (map (lambda (t) (srcloc-token t t-loc))
-                               tokens)])
-              (set! pending-tokens (cdr prods))
-              (car prods))
-            produce))
-      (pop! pending-tokens)))
+  (set! last-token 
+        (if (empty? pending-tokens)
+            (let* ([produce (active-lexer ip)]
+                   [tokens (and (srcloc-token? produce) 
+                                (srcloc-token-token produce))])
+              (if (list? tokens)
+                  (let* ([t-loc (srcloc-token-srcloc produce)]
+                         [prods (map (lambda (t) (srcloc-token t t-loc))
+                                     tokens)])
+                    (set! pending-tokens (cdr prods))
+                    (car prods))
+                  produce))
+            (pop! pending-tokens)))
+  last-token)
 
 (provide bilang-lexer)
