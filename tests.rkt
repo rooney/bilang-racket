@@ -13,7 +13,7 @@ let avg-score = \
 	scores.reduce() to:0 -> :a:sum :score
 		sum+ score
 	,/ scores.count()
-println avg-score
+output avg-score
 EOF
       '(return
         (apply3
@@ -40,7 +40,7 @@ EOF
                    (apply1 (applyO sum +) score)))))
                /)
               (apply0 (apply0 scores (prop count)) (group (applyO paren)))))))
-          (apply1 println avg-score)))))
+          (apply1 output avg-score)))))
 
 (test "let top10avg = {,: sort,: reverse,: first 10,: average}"
       '(return
@@ -108,14 +108,14 @@ EOF
 
 
 (test #<<EOF
-let prompt(:text String, :then:callback) => print text, readln, callback
+let prompt(:text String, :then:callback) => output text, input.line, callback
 
 let unless(:unwanted :x :else:replacement) =
 	x== unwanted,? -> replacement
 	else: -> x
 
 prompt name = 'Your name: '
-println "Hello #!{name,: unless '', else:'World'}"
+output "Hello #!{name,: unless '', else:'World'}"
 EOF
       '(return
         (apply3
@@ -128,7 +128,7 @@ EOF
              (applyC1
               (apply1 (applyO paren (label : text)) String)
               (alias (label : then) (label : callback)))))
-           (_Qx => (applyC1 (applyC1 (apply1 print text) readln) callback))))
+           (_Qx => (applyC1 (applyC1 (apply1 output text) (apply0 input (prop line))) callback))))
          (apply3
           (_Q_2
            let
@@ -147,7 +147,7 @@ EOF
           (apply3
            (_Qx prompt (_Qx name (_Qx = (string "Your name: "))))
            (apply1
-            println
+            output
             (string
              "Hello "
              (group

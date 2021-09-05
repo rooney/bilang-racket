@@ -4,45 +4,21 @@
 (define-lex-abbrevs
   (alpha (:+ alphabetic))
   (alnum (:+ (:or alphabetic numeric)))
+  (comment (:seq "#!" spacetabs (:+ (:~ newline-char))))
   (digits (:+ (char-set "0123456789")))
   (identifier (:seq alpha (:* (:seq (:* "-") alnum))))
   (newline-char (char-set "\r\n"))
   (newline (:seq spacetabs? (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
-  (operator (:or ".." (:+ (char-set "+-*/=><?&|`~@$%^#!_"))))
+  (operator (:+ (char-set "+-*/=><?&|`~@$%^_#!")))
   (quoted "\"")
   (quotes "'")
   (semi (:+ (:seq spacetabs? ";" spacetabs?)))
-  (space/tab (:or #\space #\tab))
-  (spacetabs? (:* space/tab))
-  (until-newline (:+ (:~ newline-char))))
-
-(define-macro (base-lexer+ CUSTOM-RULES ...)
-  #'(lexer-srcloc
-     CUSTOM-RULES ...
-     [identifier (token 'ID (string->symbol lexeme))]
-     [operator (token 'OP (string->symbol lexeme))]
-     ["(" (token-LPAREN)]
-     ["{" (token-LBRACE)]
-     ["[" token-LBRACKET]
-     [")" (token-RPAREN)]
-     ["}" (token-RBRACE)]
-     ["]" token-RBRACKET]
-     ["\\" (token 'BACKSLASH lexeme)]
-     [",:" (token 'PIPE 'piped-to:)]
-     ["," (token 'COMMA lexeme)]
-     [":" (token 'COLON ':)]
-     ["." (token 'DOT lexeme)]
-     [(:seq (:? "-") digits "." digits) (token 'DECIMAL (string->number lexeme))]
-     [(:seq (:? "-") digits)            (token 'INTEGER (string->number lexeme))]
-     [(:seq quotes nextloc) (multi-line-string quotes)]
-     [(:seq quoted nextloc) (multi-line-string quoted)]
-     [quotes (single-line-string quotes)]
-     [quoted (single-line-string quoted)]
-     [(eof) (close-indents)]))
+  (spacetabs (:+ (:or #\space #\tab)))
+  (spacetabs? (:* (:or #\space #\tab))))
 
 (define main-lexer
-  (base-lexer+
+  (lexer-srcloc
    [(:+ (:or nextloc semi))
     (let* ([next-level (add1 current-indent-level)]
            [indent-amount (calc-indent lexeme)]
@@ -62,12 +38,47 @@
                              (lambda _ (token-DEDENT)))
                  (list token-NEWLINE))]))]
    [semi token-NEWLINE]
+   [comment token-COMMENT]
+   [identifier (token 'ID (string->symbol lexeme))]
+   [operator (cdr (foldr (lambda (op lst)
+                           (cons (token 'HASH-BANG "#!") 
+                                 (if (non-empty-string? op)
+                                     (cons (token 'OP (string->symbol op)) lst)
+                                     lst)))
+                         '()
+                         (string-split lexeme "#!" #:trim? #f)))]
+   [(:or ".." "..." "....") (token 'OP (string->symbol lexeme))]
    [(:or (:+ #\space) (:+ #\tab)) (token 'SPACE lexeme)]
-   [(:seq "#!" (:or quoted quotes) nextloc) (list (token 'MACRO lexeme)
-                                                  (token-QUOTE block-lexer)
-                                                  (token-INDENT))]
    ["#!{" (cons (token 'MACRO lexeme) (token-LBRACE))]
-   ["#!" (token-MACRO)]))
+   ["(" (token-LPAREN)]
+   ["{" (token-LBRACE)]
+   ["[" token-LBRACKET]
+   [")" (token-RPAREN)]
+   ["}" (token-RBRACE)]
+   ["]" token-RBRACKET]
+   ["\\" (token 'BACKSLASH lexeme)]
+   [",:" (token 'PIPE 'piped-to:)]
+   ["," (token 'COMMA lexeme)]
+   [":" (token 'COLON ':)]
+   ["." (token 'DOT lexeme)]
+   [(:seq (:? "-") digits "." digits) (token 'DECIMAL (string->number lexeme))]
+   [(:seq (:? "-") digits)            (token 'INTEGER (string->number lexeme))]
+   [(:seq quotes nextloc) (multi-line-string quotes)]
+   [(:seq quoted nextloc) (multi-line-string quoted)]
+   [quotes string-quotes]
+   [quoted (single-line-string quoted)]
+   [(eof) (close-indents)]))
+
+(define-macro token-COMMENT
+  #'(token 'COMMENT lexeme))
+
+(define-macro string-quotes
+  #'(token-QUOTE (lexer-srcloc [newline-char (list (token-UNQUOTE) token-NEWLINE)]
+                               ["#!{" (token-LBRACE)]
+                               [(:seq "#!" spacetabs) token-COMMENT]
+                               [(:+ (:~ "#" newline-char)) (token 'STRING lexeme)]
+                               [any-char (token 'STRING lexeme)]
+                               [(eof) (close-indents)])))
 
 (define-macro (string-lexer QUOTCHAR CUSTOM-RULES ...)
   #'(lexer-srcloc CUSTOM-RULES ...
@@ -199,60 +210,14 @@
   (pop-mode!)
   (token 'RPAREN ''RPAREN))
 
-(define-macro (token-QUOTE LEXER)
-  #'(begin
-      (push-mode! LEXER)
-      (token 'QUOTE ''QUOTE)))
+(define (token-QUOTE lexer)
+  (begin
+    (push-mode! lexer)
+    (token 'QUOTE ''QUOTE)))
 
 (define (token-UNQUOTE)
   (pop-mode!)
   (token 'UNQUOTE ''UNQUOTE))
-
-(define (token-MACRO)
-  (push-mode! (match (toktype last-token)
-                [or 'NEWLINE 'INDENT block-macro-lexer]
-                ['BPAREN paren-macro-lexer]
-                [_ std-macro-lexer]))
-  (token 'MACRO ''MACRO))
-
-(define paren-macro-lexer
-  (lexer-srcloc
-   [(:+ (:~ ")")) (token 'STRING lexeme)]
-   [")" (begin (pop-mode!) (token-RPAREN))]))
-
-(define std-macro-lexer
-  (lexer-srcloc
-   [until-newline (token 'STDMAC lexeme)]
-   [nextloc (let* ([next-level (add1 current-indent-level)]
-                   [indent-amount (calc-indent lexeme)]
-                   [excess-amount (- indent-amount next-level)])
-              (cond
-                [(= indent-amount current-indent-level) (begin (pop-mode!) token-NEWLINE)]
-                [(> indent-amount current-indent-level)
-                 (token 'STDMAC lexeme)]
-                [(< indent-amount current-indent-level)
-                 (begin
-                   (pop-mode!)
-                   (append (build-list (- current-indent-level indent-amount)
-                                       (lambda _ (token-DEDENT)))
-                           (list token-NEWLINE)))]))]))
-
-(define block-macro-lexer
-  (lexer-srcloc
-   [until-newline (token 'MACBODY lexeme)]
-   [nextloc (let* ([next-level (add1 current-indent-level)]
-                   [indent-amount (calc-indent lexeme)]
-                   [excess-amount (- indent-amount next-level)])
-              (cond
-                [(= indent-amount current-indent-level) (token 'MACBODY lexeme)]
-                [(> indent-amount current-indent-level)
-                 (token 'MACBODY lexeme)]
-                [(< indent-amount current-indent-level)
-                 (begin
-                   (pop-mode!)
-                   (append (build-list (- current-indent-level indent-amount)
-                                       (lambda _ (token-DEDENT)))
-                           (list token-NEWLINE)))]))]))
 
 (define pending-tokens '())
 (define last-token void)
