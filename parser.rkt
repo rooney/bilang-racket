@@ -2,7 +2,7 @@
 return : /NEWLINE? expr4
 
 @expr4 : exprE (/space|/NEWLINE|/INDENT/DEDENT)?
-@exprE : applyE3 | applyEZ | applyEQ | applyE1 | applyEO
+@exprE : applyE3 | applyEZ | applyE1 | applyEO
        | enco
        | expr3
 @expr3 : apply3
@@ -28,14 +28,13 @@ return : /NEWLINE? expr4
        | e
 
 applyE3 : enco /NEWLINE expr3
-applyEZ : (enco|applyE1) dent
-        | enco /space _Q_2
-applyEQ : enco /space _Q_
+applyEZ : enco /space (_Q_|_Q_2)
+        | (enco|applyE1) dent
 applyE1 : (enco|applyEO) /space expr1
 applyEO : enco (exprO|qwop)
 @enco   : exprE /NEWLINE co
         | (applyEO|applyE1) co
-apply3  : (applyEO|applyE1|applyEQ|applyEZ|expQ2) /NEWLINE expr3
+apply3  : (applyEO|applyE1|applyEZ|expQ2) /NEWLINE expr3
 _Q_2    : qwop dent
         | qwop /space apply2
         | (qwop|expCO) /space _Q_2
@@ -71,6 +70,7 @@ apply0  : expr0 e
 group : /LPAREN expr4 /RPAREN
       | /LBRACE expr4 /RBRACE
       | /LBRACKET expr4 /RBRACKET
+      | /BQUOTE dent
 @dent : /INDENT expr4 /DEDENT
 @undent : /BACKSLASH dent
 @space : /SPACE (/BACKSLASH /NEWLINE)?

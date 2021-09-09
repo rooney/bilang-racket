@@ -61,18 +61,18 @@ EOF
 
 
 (test #<<EOF
-.grade(:) =
-	.attendance> minimum-attendance, else: -> 'F'
-	.test-results.count()> 0, else: -> 'N/A'
+.grade(_) =
+	.attendance> minimum-attendance, else: -> 'F
+	.test-results.count()> 0, else: -> 'N/A
 	.test-results.map() {.score},: max,:
-		: {>= 90} => 'A'
-		: {>= 75} => 'B'
-		: {>= 60} => 'C'
-		:         => 'D'
+		: {>= 90} => 'A
+		: {>= 75} => 'B
+		: {>= 60} => 'C
+		:         => 'D
 EOF
       '(return
         (_Q_2
-         (apply0 (prop grade) (group (applyO paren (label :))))
+         (apply0 (prop grade) (group (applyO paren _)))
          (_Q_2
           =
           (apply3
@@ -114,8 +114,10 @@ let unless(:unwanted :x :else:replacement) =
 	x== unwanted,? -> replacement
 	else: -> x
 
-prompt name = 'Your name: '
-output "Hello #!{name,: unless '', else:'World'}"
+prompt "Your name: ", -> :name
+output "
+	Hello #!{name,: unless "", else:"World"}
+"
 EOF
       '(return
         (apply3
@@ -145,15 +147,8 @@ EOF
               (_Qx (applyCO (apply1 (applyO x ==) unwanted) ?) (_Qx -> replacement))
               (_Qx (keyword else :) (_Qx -> x))))))
           (apply3
-           (_Qx prompt (_Qx name (_Qx = (string "Your name: "))))
-           (apply1
-            output
-            (string
-             "Hello "
-             (group
-              (applyC1
-               (applyC1 (applyO brace name) piped-to: (apply1 unless (string)))
-               (applyO (keyword else :) (string "World")))))))))))
+           (applyCQ (apply1 prompt (string "Your name: ")) (_Qx -> (label : name)))
+           (apply1 output (string "Hello " (group (applyC1 (applyC1 (applyO brace name) piped-to: (apply1 unless (string))) (applyO (keyword else :) (string "World")))))))))))
 
 (test #<<EOF
 let unless(:unwanted :x :else:replacement) =
@@ -220,55 +215,52 @@ EOF
                (group (_Qx (applyO brace (label :)) (_Qx => Boolean))))))))))))
 
 (test #<<EOF
-progress.complete? '
-	<p class='#!{
-		sql #!'
-			SELECT 'name' FROM 'themes'
-			WHERE 'user_id' = '#!{user.id}'
-		, -> :theme
-			'theme-#!{theme.name}'
-		else:
-			'default'
-	}'>
-		Word,
-
-		Sentence One.
-		Sentence Two.
-	</p>
-'
-else: #!"
-	<div class="loading" data-progress=
-		"#!{progress%}%"/>
+output '
+	<table class='theme-`
+		db.query1 '
+			SELECT name FROM themes
+			WHERE user-id = `
+				session.user.id
+		else: 'default
+	'>
+		<tr>
+			<td>`
+				db.query 'SELECT * FROM entries
+				,.join() '
+							</td>
+						</tr>
+						<tr>
+							<td>
+			</td>
+		</tr>
+	</table>
 EOF
       '(return
-        (apply3
-         (apply1
-          (apply0 progress (prop complete ?))
-          (string
-           "<p class="
-           "'"
-           (group
-            (apply2
-             (applyO brace)
-             (apply3
-              (applyEZ
-               (apply1 sql (string "SELECT 'name' FROM 'themes'" "\n" "WHERE 'user_id' = '" (group (applyO brace (apply0 user (prop id)))) "'" "\n"))
-               (_Q_2 -> (apply2 (label : theme) (string "theme-" (group (applyO brace (apply0 theme (prop name))))))))
-              (_Q_2 (keyword else :) (string "default")))))
-           "'"
-           ">"
-           "\n"
-           "\t"
-           "Word,"
-           "\n"
-           "\n"
-           "\t"
-           "Sentence One."
-           "\n"
-           "\t"
-           "Sentence Two."
-           "\n"
-           "</p>"))
-         (_Qx (keyword else :) (string "<div class=\"loading\" data-progress=" "\n" "\t" "\"" (group (applyO brace (applyO progress %))) "%\"/>")))))
-
-
+        (apply1
+         output
+         (string
+          "<table class='theme-"
+          (group
+           (apply3
+            (apply1 (apply0 db (prop query1)) (string "SELECT name FROM themes" "\n" "WHERE user-id = " (group (apply0 (apply0 session (prop user)) (prop id)))))
+            (_Qx (keyword else :) (string "default"))))
+          "'>"
+          "\n"
+          "\t"
+          "<tr>"
+          "\n"
+          "\t\t"
+          "<td>"
+          (group
+           (applyE1
+            (applyEO (apply1 (apply0 db (prop query)) (string "SELECT * FROM entries")) (apply0 (prop join) (group (applyO paren))))
+            (string "\t\t" "</td>" "\n" "\t" "</tr>" "\n" "\t" "<tr>" "\n" "\t\t" "<td>")))
+          "\n"
+          "\t\t"
+          "\n"
+          "</td>"
+          "\n"
+          "\t"
+          "</tr>"
+          "\n"
+          "</table>"))))
