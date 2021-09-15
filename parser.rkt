@@ -29,7 +29,7 @@ return : /NEWLINE? expr4
 
 applyE3 : enco /NEWLINE expr3
 applyEZ : enco /space (_Q_|_Q_2)
-        | (enco|applyE1) dent
+        | (enco|applyEO|applyE1) dent
 applyE1 : (enco|applyEO) /space expr1
 applyEO : enco (exprO|qwop)
 @enco   : exprE /NEWLINE co
