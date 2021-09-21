@@ -6,82 +6,74 @@ return : /NEWLINE? expr4
        | enco
        | expr3
 @expr3 : apply3
-       | expQ2
-@expQ2 : _Q_2
-       | apply2
-       | expQ1
-@expQ1 : _Q_
-       | applyCQ
+       | exprZ
+@exprZ : _Q_
+       | eco
+       | applyC2
        | expC1
 @expC1 : applyC1
-       | eco
        | expr1
 @expr1 : apply1
        | expCO
 @expCO : applyCO
        | exprO
 @exprO : applyO
-       | expr0
-@expr0 : apply0
        | label
        | alias
+       | expr0
+@expr0 : apply0
        | e
 
 applyE3 : enco /NEWLINE expr3
-applyEZ : enco /space (_Q_|_Q_2)
-        | (enco|applyEO|applyE1) dent
-applyE1 : (enco|applyEO) /space expr1
+applyEZ : enco /space _Q_
+applyE1 : (enco|applyEO) (/space expr1|dent)
 applyEO : enco (exprO|qwop)
 @enco   : exprE /NEWLINE co
         | (applyEO|applyE1) co
-apply3  : (applyEO|applyE1|applyEZ|expQ2) /NEWLINE expr3
-_Q_2    : qwop dent
-        | qwop /space apply2
-        | (qwop|expCO) /space _Q_2
-apply2  : eco /space _Q_2
-        | (eco|expC1) dent
+apply3  : (applyEO|applyE1|applyEZ|exprZ) /NEWLINE expr3
 @_Q_    : _Qx | _Q
-_Qx     : qwop /space expQ1
-        | expCO /space _Qx
-@_Q     : xQ | qwop
+_Qx     : expCO /space _Qx
+        | qwop (/space exprZ|dent)
+@_Q     : qwop | xQ
 xQ      : expCO /space _Q
 @qwop   : keyword | OP
-applyCQ : eco /space _Q_
-applyC1 : (eco|applyCO) /space expr1
-@eco    : (_Q|applyC1|expr1) co
+@eco    : (expC1|_Q) co
 @co     : comma | PIPE
-apply1  : exprO /space expr1
+applyC2 : eco /space _Q_
+applyC1 : eco (/space _Q|dent)
+        | (eco|applyCO) /space expr1
+apply1  : expCO (/space expr1|dent)
 applyCO : eco (exprO|qwop)
 applyO  : begin (exprO|qwop)?
         | keyword (exprO|qwop)
         | expr0 OP
-apply0  : expr0 e
+apply0  : expr0 OP e
+        | expr0 e
         | OP e
 
 @e : INTEGER | DECIMAL
    | string
    | comment
    | ID
-   | prop
-   | group
+   | dot
+   | grouping
    | undent
 
 @begin : BPAREN | BBRACE | BBRACKET
-group : /LPAREN expr4 /RPAREN
-      | /LBRACE expr4 /RBRACE
-      | /LBRACKET expr4 /RBRACKET
-      | /BQUOTE dent
-@dent : /INDENT expr4 /DEDENT
-@undent : /BACKSLASH dent
+grouping : /LPAREN expr4 /RPAREN
+         | /LBRACE expr4 /RBRACE
+         | /LBRACKET expr4 /RBRACKET
+         | /BQUOTE dent
+dent : /INDENT expr4 /DEDENT
+@undent : /BACKSLASH @dent
 @space : /SPACE (/BACKSLASH /NEWLINE)?
-@comma : /COMMA | /BACKSLASH /NEWLINE 
+@comma : /COMMA | /BACKSLASH /NEWLINE
 
 alias : label label+
-@name : OP? ID OP?
-label : COLON (OP|name)?
-keyword : (OP|name) COLON
-prop : /DOT (name|group)
+label : COLON (OP|expr0)?
+keyword : (OP|expr0) COLON
+dot : /DOT (OP|expr0)
 
 comment : COMMENT
-string : /QUOTE (STRING|group)* /UNQUOTE
-       | /QUOTE /INDENT (STRING|group|NEWLINE)* /DEDENT /UNQUOTE
+string : /QUOTE (STRING|grouping)* /UNQUOTE
+       | /QUOTE /INDENT (STRING|grouping|NEWLINE)* /DEDENT /UNQUOTE

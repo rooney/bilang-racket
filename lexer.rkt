@@ -6,7 +6,7 @@
   (alnum (:+ (:or alphabetic numeric)))
   (comment (:seq "#!" spacetabs (:+ (:~ newline-char))))
   (digits (:+ (char-set "0123456789")))
-  (identifier (:seq alpha (:* (:seq (:* "-") alnum))))
+  (identifier (:seq alpha (:? alnum)))
   (newline-char (char-set "\r\n"))
   (newline (:seq spacetabs? (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
@@ -36,7 +36,7 @@
                                       (append-if (mode-is main-lexer)
                                                  token-NEWLINE))]))]
    [semi token-NEWLINE]
-   [comment (token 'COMMENT lexeme)]
+   [comment (begin (println last-token) (token 'COMMENT lexeme))]
    [identifier (token 'ID (string->symbol lexeme))]
    [operator (cdr (foldr (lambda (op ops)
                            (cons (token 'HASH-BANG "#!") 
@@ -59,8 +59,8 @@
    ["," (token 'COMMA lexeme)]
    [":" (token 'COLON ':)]
    ["." (token 'DOT lexeme)]
-   [(:seq (:? "-") digits "." digits) (token 'DECIMAL (string->number lexeme))]
-   [(:seq (:? "-") digits)            (token 'INTEGER (string->number lexeme))]
+   [(:seq digits "." digits) (token 'DECIMAL (string->number lexeme))]
+   [digits (token 'INTEGER (string->number lexeme))]
    [(:seq quotes nextloc) multi-quotes]
    [(:seq quoted nextloc) multi-quoted]
    [quotes string-quotes]
@@ -249,9 +249,9 @@
   (token 'UNQUOTE _mode))
 
 (define pending-tokens '())
-(define last-token void)
-(define (toktype tok)
-  (token-struct-type (srcloc-token-token tok)))
+(define last-token #f)
+(define (toktype t)
+  (and t (token-struct-type (srcloc-token-token t))))
 
 (define (bilang-lexer ip)
   (set! last-token 

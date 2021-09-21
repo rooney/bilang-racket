@@ -19,28 +19,28 @@ EOF
         (apply3
          (_Qx
           let
-          (_Qx scores (_Qx = (group (applyC1 (applyC1 (applyO brace 1) 2) 3)))))
+          (_Qx scores (_Qx = (grouping (applyC1 (applyC1 (applyO brace 1) 2) 3)))))
          (apply3
           (_Qx
            let
            (_Qx
-            avg-score
+            (apply0 avg - score)
             (_Qx
              =
              (applyE1
               (applyEO
                (_Q_2
-                (apply0 (apply0 scores (prop reduce)) (group (applyO paren)))
+                (apply0 (apply0 scores (dot reduce)) (grouping (applyO paren)))
                 (_Q_2
                  (applyO (keyword to :) 0)
                  (_Q_2
                   ->
                   (apply2
                    (apply1 (alias (label : a) (label : sum)) (label : score))
-                   (apply1 (applyO sum +) score)))))
+                   (apply1 (apply0 sum +) score)))))
                /)
-              (apply0 (apply0 scores (prop count)) (group (applyO paren)))))))
-          (apply1 output avg-score)))))
+              (apply0 (apply0 scores (dot count)) (grouping (applyO paren)))))))
+          (apply1 output (apply0 avg - score))))))
 
 (test "let top10avg = {,: sort,: reverse,: first 10,: average}"
       '(return
@@ -50,7 +50,7 @@ EOF
           top10avg
           (_Qx
            =
-           (group
+           (grouping
             (applyC1
              (applyC1
               (applyC1 (applyC1 (applyO brace) piped-to: sort) piped-to: reverse)
@@ -72,21 +72,21 @@ EOF
 EOF
       '(return
         (_Q_2
-         (apply0 (prop grade) (group (applyO paren _)))
+         (apply0 (dot grade) (grouping (applyO paren _)))
          (_Q_2
           =
           (apply3
-           (applyCQ (apply1 (prop attendance >) minimum-attendance) (_Qx (keyword else :) (_Qx -> (string "F"))))
+           (applyCQ (apply1 (apply0 (dot attendance) >) (apply0 minimum - attendance)) (_Qx (keyword else :) (_Qx -> (string "F"))))
            (apply3
-            (applyCQ (apply1 (applyO (apply0 (apply0 (prop test-results) (prop count)) (group (applyO paren))) >) 0) (_Qx (keyword else :) (_Qx -> (string "N/A"))))
+            (applyCQ (apply1 (applyO (apply0 (apply0 (dot test-results) (dot count)) (grouping (applyO paren))) >) 0) (_Qx (keyword else :) (_Qx -> (string "N/A"))))
             (apply2
-             (applyC1 (apply1 (apply0 (apply0 (prop test-results) (prop map)) (group (applyO paren))) (group (applyO brace (prop score)))) piped-to: max)
+             (applyC1 (apply1 (apply0 (apply0 (dot test-results) (dot map)) (grouping (applyO paren))) (grouping (applyO brace (dot score)))) piped-to: max)
              piped-to:
              (apply3
-              (_Qx (label :) (_Qx (group (apply1 (applyO brace >=) 90)) (_Qx => (string "A"))))
+              (_Qx (label :) (_Qx (grouping (apply1 (applyO brace >=) 90)) (_Qx => (string "A"))))
               (apply3
-               (_Qx (label :) (_Qx (group (apply1 (applyO brace >=) 75)) (_Qx => (string "B"))))
-               (apply3 (_Qx (label :) (_Qx (group (apply1 (applyO brace >=) 60)) (_Qx => (string "C")))) (_Qx (label :) (_Qx => (string "D")))))))))))))
+               (_Qx (label :) (_Qx (grouping (apply1 (applyO brace >=) 75)) (_Qx => (string "B"))))
+               (apply3 (_Qx (label :) (_Qx (grouping (apply1 (applyO brace >=) 60)) (_Qx => (string "C")))) (_Qx (label :) (_Qx => (string "D")))))))))))))
 
 (test "let top10avg = {,: sort,: reverse,: first 10,: average}"
       '(return
@@ -96,7 +96,7 @@ EOF
           top10avg
           (_Qx
            =
-           (group
+           (grouping
             (applyC1
              (applyC1
               (applyC1 (applyC1 (applyO brace) piped-to: sort) piped-to: reverse)
@@ -126,18 +126,18 @@ EOF
           (_Qx
            (apply0
             prompt
-            (group
+            (grouping
              (applyC1
               (apply1 (applyO paren (label : text)) String)
               (alias (label : then) (label : callback)))))
-           (_Qx => (applyC1 (applyC1 (apply1 output text) (apply0 input (prop line))) callback))))
+           (_Qx => (applyC1 (applyC1 (apply1 output text) (apply0 input (dot line))) callback))))
          (apply3
           (_Q_2
            let
            (_Q_2
             (apply0
              unless
-             (group
+             (grouping
               (apply1
                (applyO paren (label : unwanted))
                (apply1 (label : x) (alias (label : else) (label : replacement))))))
@@ -148,7 +148,7 @@ EOF
               (_Qx (keyword else :) (_Qx -> x))))))
           (apply3
            (applyCQ (apply1 prompt (string "Your name: ")) (_Qx -> (label : name)))
-           (apply1 output (string "Hello " (group (applyC1 (applyC1 (applyO brace name) piped-to: (apply1 unless (string))) (applyO (keyword else :) (string "World")))))))))))
+           (apply1 output (string "Hello " (grouping (applyC1 (applyC1 (applyO brace name) piped-to: (apply1 unless (string))) (applyO (keyword else :) (string "World")))))))))))
 
 (test #<<EOF
 let unless(:unwanted :x :else:replacement) =
@@ -171,7 +171,7 @@ EOF
           (_Q_2
            (apply0
             unless
-            (group
+            (grouping
              (apply1
               (applyO paren (label : unwanted))
               (apply1 (label : x) (alias (label : else) (label : replacement))))))
@@ -184,7 +184,7 @@ EOF
           (_Q_2
            let
            (_Q_2
-            (apply0 is (group (apply1 (applyO paren (label : x)) (label : y))))
+            (apply0 is (grouping (apply1 (applyO paren (label : x)) (label : y))))
             (_Q_2
              =
              (apply2
@@ -195,7 +195,7 @@ EOF
                 (apply1 (label :) Predicate)
                 (applyO
                  (keyword => :)
-                 (group (apply1 (applyO paren apply) (applyO (keyword to :) x)))))
+                 (grouping (apply1 (applyO paren apply) (applyO (keyword to :) x)))))
                (_Qx (label :) (_Qx => (apply1 (applyO x ==) y))))))))
           (apply2
            let
@@ -203,7 +203,7 @@ EOF
             (_Qx
              (apply0
               apply
-              (group
+              (grouping
                (apply1 (applyO paren (label : f)) (alias (label : to) (label : x)))))
              (_Qx => (apply1 f x)))
             (_Qx
@@ -212,7 +212,7 @@ EOF
               =
               (apply0
                @
-               (group (_Qx (applyO brace (label :)) (_Qx => Boolean))))))))))))
+               (grouping (_Qx (applyO brace (label :)) (_Qx => Boolean))))))))))))
 
 (test #<<EOF
 output '
@@ -240,9 +240,9 @@ EOF
          output
          (string
           "<table class='theme-"
-          (group
+          (grouping
            (apply3
-            (apply1 (apply0 db (prop query1)) (string "SELECT name FROM themes" "\n" "WHERE user-id = " (group (apply0 (apply0 session (prop user)) (prop id)))))
+            (apply1 (apply0 db (dot query1)) (string "SELECT name FROM themes" "\n" "WHERE user-id = " (grouping (apply0 (apply0 session (dot user)) (dot id)))))
             (_Qx (keyword else :) (string "default"))))
           "'>"
           "\n"
@@ -251,9 +251,9 @@ EOF
           "\n"
           "\t\t"
           "<td>"
-          (group
+          (grouping
            (applyE1
-            (applyEO (apply1 (apply0 db (prop query)) (string "SELECT * FROM entries")) (apply0 (prop join) (group (applyO paren))))
+            (applyEO (apply1 (apply0 db (dot query)) (string "SELECT * FROM entries")) (apply0 (dot join) (grouping (applyO paren))))
             (string "\t\t" "</td>" "\n" "\t" "</tr>" "\n" "\t" "<tr>" "\n" "\t\t" "<td>")))
           "\n"
           "\t\t"
