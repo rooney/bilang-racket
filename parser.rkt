@@ -37,7 +37,7 @@ _Qx     : expCO /space _Qx
 @_Q     : qwop | xQ
 xQ      : expCO /space _Q
 @qwop   : keyword | OP
-@eco    : (expC1|_Q) co
+eco    : (applyC1|apply1|applyCO|_Q) co
 @co     : comma | PIPE
 applyC2 : eco /space _Q_
 applyC1 : eco (/space _Q|dent)

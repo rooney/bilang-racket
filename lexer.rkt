@@ -1,10 +1,11 @@
 #lang br
-(require brag/support syntax/readerr)
+(require brag/support syntax/readerr srfi/13)
 
 (define-lex-abbrevs
   (alpha (:+ alphabetic))
   (alnum (:+ (:or alphabetic numeric)))
-  (comment (:seq "#!" spacetabs (:+ (:~ newline-char))))
+  (comment (:seq spacetabs comment?))
+  (comment? (:seq "#!" spacetabs (:+ (:~ newline-char))))
   (digits (:+ (char-set "0123456789")))
   (identifier (:seq alpha (:? alnum)))
   (newline-char (char-set "\r\n"))
@@ -19,7 +20,7 @@
 
 (define main-lexer
   (lexer-srcloc
-   [(:+ (:or nextloc semi))
+   [(:seq (:or nextloc semi comment) (:* (:or nextloc semi comment?)))
     (measure-indent-amount ([next-level (add1 _indent-level)]
                             [excess-amount (- _indent-amount next-level)])
                            (cond
@@ -36,15 +37,18 @@
                                       (append-if (mode-is main-lexer)
                                                  token-NEWLINE))]))]
    [semi token-NEWLINE]
-   [comment (begin (println last-token) (token 'COMMENT lexeme))]
+   [comment? (if (= 1 (position-offset start-pos))
+                 (token 'COMMENT lexeme)
+                 (rr-error "unexpected #!"))]
    [identifier (token 'ID (string->symbol lexeme))]
-   [operator (cdr (foldr (lambda (op ops)
-                           (cons (token 'HASH-BANG "#!") 
-                                 (if (non-empty-string? op)
-                                     (cons (token 'OP (string->symbol op)) ops)
-                                     ops)))
-                         '()
-                         (string-split lexeme "#!" #:trim? #f)))]
+   [operator (if (string-contains? lexeme "#!")
+                 (let ([hashpos (string-contains lexeme "#!")]) 
+                   (rr-error "unexpected #!"
+                             (position-line start-pos)
+                             (+ hashpos (position-col start-pos))
+                             (+ hashpos (position-offset start-pos))
+                             2))
+                 (token 'OP (string->symbol lexeme)))]
    [(:or ".." "..." "....") (token 'OP (string->symbol lexeme))]
    [(:or (:+ #\space) (:+ #\tab)) (token 'SPACE lexeme)] 
    ["#!{" (cons (token 'MACRO lexeme) (token-LBRACE))]
@@ -107,13 +111,13 @@
   #'(begin (push-mode! #;jump-to _indent-level)
            (set! _indent-level _indent-amount)
            (measure-indent-amount ()
-             (if (= _indent-amount (add1 _indent-level))
-                 (list (token 'BQUOTE ''BQUOTE) (token-INDENT))
-                 (rr-error "wrong indentation level"
-                           (position-line end-pos)
-                           1
-                           (- (position-offset end-pos) _indent-amount)
-                           _indent-amount)))))
+                                  (if (= _indent-amount (add1 _indent-level))
+                                      (list (token 'BQUOTE ''BQUOTE) (token-INDENT))
+                                      (rr-error "wrong indentation level"
+                                                (position-line end-pos)
+                                                1
+                                                (- (position-offset end-pos) _indent-amount)
+                                                _indent-amount)))))
 
 (define-macro (unterminated-string)
   #'(rr-error "unterminated string (missing closing quote)"))
@@ -150,7 +154,8 @@
 
 (define-macro (measure-indent-amount DEFS BODY ...)
   #'(let ([last-line (lastline lexeme)])
-      (set! _indent-amount (if (string-contains? last-line ";")
+      (set! _indent-amount (if (or (string-contains? last-line ";")
+                                   (string-contains? last-line "#!"))
                                _indent-level
                                (string-length last-line)))
       (let* DEFS BODY ...)))
