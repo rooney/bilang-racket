@@ -6,17 +6,17 @@ return : /NEWLINE? expr4
        | enco
        | expr3
 @expr3 : apply3
-       | exprZ
-@exprZ : _Q_
+       | expQz
+@expQz : kQz
+       | oQz
+       | exprK
+@exprK : applyK1
+       | applyKO
        | eco
-       | applyC2
-       | expC1
-@expC1 : applyC1
        | expr1
 @expr1 : apply1
-       | expCO
-@expCO : applyCO
        | exprO
+@exprQ : exprO | qwop
 @exprO : applyO
        | label
        | alias
@@ -24,28 +24,25 @@ return : /NEWLINE? expr4
 @expr0 : apply0
        | e
 
-applyE3 : enco /NEWLINE expr3
-applyEZ : enco /space _Q_
+applyE3 : (enco|applyEO|applyE1|applyEZ) /NEWLINE expr3
+applyEZ : (enco|applyEO) /space _Qz
 applyE1 : (enco|applyEO) (/space expr1|dent)
-applyEO : enco (exprO|qwop)
+applyEO : enco exprQ
 @enco   : exprE /NEWLINE co
         | (applyEO|applyE1) co
-apply3  : (applyEO|applyE1|applyEZ|exprZ) /NEWLINE expr3
-@_Q_    : _Qx | _Q
-_Qx     : expCO /space _Qx
-        | qwop (/space exprZ|dent)
-@_Q     : qwop | xQ
-xQ      : expCO /space _Q
+apply3  : expQz /NEWLINE expr3
+kQz     : (eco|applyKO) /space _Qz
+oQz     : exprO /space _Qz
+@_Qz    : oQz | Qz
+Qz      : qwop (/space (expQz|Qz)|dent)
 @qwop   : keyword | OP
-eco    : (applyC1|apply1|applyCO|_Q) co
+@eco    : exprK co
 @co     : comma | PIPE
-applyC2 : eco /space _Q_
-applyC1 : eco (/space _Q|dent)
-        | (eco|applyCO) /space expr1
-apply1  : expCO (/space expr1|dent)
-applyCO : eco (exprO|qwop)
-applyO  : begin (exprO|qwop)?
-        | keyword (exprO|qwop)
+applyK1 : (eco|applyKO) (/space expr1|dent)
+applyKO : eco exprQ
+apply1  : exprO (/space expr1|dent)
+applyO  : begin exprQ?
+        | keyword exprQ
         | expr0 OP
 apply0  : expr0 OP e
         | expr0 e
@@ -53,8 +50,8 @@ apply0  : expr0 OP e
 
 @e : INTEGER | DECIMAL
    | string
-   | comment
    | ID
+   | comment
    | dot
    | grouping
    | undent

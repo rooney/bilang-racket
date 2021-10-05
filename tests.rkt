@@ -12,7 +12,7 @@ let scores = {1, 2, 3}
 let avg-score = \
 	scores.reduce() to:0 -> :a:sum :score
 		sum+ score
-	,/ scores.count()
+	/ scores.count()
 output avg-score
 EOF
       '(return
@@ -78,7 +78,7 @@ EOF
           (apply3
            (applyCQ (apply1 (apply0 (dot attendance) >) (apply0 minimum - attendance)) (_Qx (keyword else :) (_Qx -> (string "F"))))
            (apply3
-            (applyCQ (apply1 (applyO (apply0 (apply0 (dot test-results) (dot count)) (grouping (applyO paren))) >) 0) (_Qx (keyword else :) (_Qx -> (string "N/A"))))
+            (applyCQ (apply1 (applyO (apply0 (apply0 (apply0 (dot test) - results) (dot count)) (grouping (applyO paren))) >) 0) (_Qx (keyword else :) (_Qx -> (string "N/A"))))
             (apply2
              (applyC1 (apply1 (apply0 (apply0 (dot test-results) (dot map)) (grouping (applyO paren))) (grouping (applyO brace (dot score)))) piped-to: max)
              piped-to:
