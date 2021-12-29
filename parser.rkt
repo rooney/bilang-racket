@@ -1,76 +1,69 @@
 #lang brag
 return : /NEWLINE? expr4
 
-@expr4 : exprE (/space|/NEWLINE|/INDENT/DEDENT)?
-@exprE : applyE3 | applyEZ | applyE1 | applyEO
-       | enco
-       | expr3
+@expr4 : expr3 (/SPACE|/NEWLINE|/INDENT/DEDENT)?
 @expr3 : apply3
-       | expQz
-@expQz : kQz
-       | oQz
+       | exprZ
+@exprZ : kQz
        | exprK
 @exprK : applyK1
+       | applyK0
        | applyKO
-       | eco
+       | Kc
        | expr1
 @expr1 : apply1
+       | exprQ
+@exprQ : applyQ
+       | symbol
        | exprO
-@exprQ : exprO | qwop
 @exprO : applyO
-       | label
-       | alias
+       | id
        | expr0
 @expr0 : apply0
        | e
 
-applyE3 : (enco|applyEO|applyE1|applyEZ) /NEWLINE expr3
-applyEZ : (enco|applyEO) /space _Qz
-applyE1 : (enco|applyEO) (/space expr1|dent)
-applyEO : enco exprQ
-@enco   : exprE /NEWLINE co
-        | (applyEO|applyE1) co
-apply3  : expQz /NEWLINE expr3
-kQz     : (eco|applyKO) /space _Qz
-oQz     : exprO /space _Qz
-@_Qz    : oQz | Qz
-Qz      : qwop (/space (expQz|Qz)|dent)
-@qwop   : keyword | OP
-@eco    : exprK co
-@co     : comma | PIPE
-applyK1 : (eco|applyKO) (/space expr1|dent)
-applyKO : eco exprQ
-apply1  : exprO (/space expr1|dent)
-applyO  : begin exprQ?
-        | keyword exprQ
-        | expr0 OP
-apply0  : expr0 OP e
-        | expr0 e
+apply3  : exprZ /NEWLINE expr3
+kQz     : (applyK0|applyKO|Kc|exprQ) /SPACE _Qz
+@_Qz    : kQz | Qz
+Qz      : (label|OP) (/SPACE (exprZ|Qz)|dent)
+@Kc     : exprK c
+        | exprZ /NEWLINE c
+@c      : /COMMA | PIPE
+applyK1 : (Kc|applyK0|applyKO) (/SPACE expr1|dent)
+applyK0 : (Kc|applyK0) (dot|group)
+applyKO : (Kc|applyK0) OP
+        | exprZ /NEWLINE OP
+apply1  : exprQ (/SPACE expr1|dent)
+applyQ  : begin (label|exprQ|OP)?
+        | label (label|exprO)
+applyO  : expr0 op
+        | expr0 dot
+apply0  : exprO group
+        | symbol group
         | OP e
 
-@e : INTEGER | DECIMAL
+@e : num
    | string
-   | ID
-   | comment
-   | dot
-   | grouping
-   | undent
+   | group
+
+id : (num|OP)? ID
+   | @id (op|dot)
+
+op : OP
+key : (OP|@id|@num)+
+label : key COLON
+symbol : (COLON key?)? COLON (op|id)?
+dot : /DOT (OP|@id|group)
+@num : INTEGER | DECIMAL
+string : /QUOTE (STRING|group)* /UNQUOTE
+       | /QUOTE /INDENT (STRING|group|NEWLINE)* /DEDENT /UNQUOTE
 
 @begin : BPAREN | BBRACE | BBRACKET
-grouping : /LPAREN expr4 /RPAREN
-         | /LBRACE expr4 /RBRACE
-         | /LBRACKET expr4 /RBRACKET
-         | /BQUOTE dent
-dent : /INDENT expr4 /DEDENT
-@undent : /BACKSLASH @dent
-@space : /SPACE (/BACKSLASH /NEWLINE)?
-@comma : /COMMA | /BACKSLASH /NEWLINE
+group : /LPAREN expr4 /RPAREN
+      | /LBRACE expr4 /RBRACE
+      | /LBRACKET expr4 /RBRACKET
+      | /BQUOTE indent
+@dent : indent | undent
+indent : /INDENT expr4 /DEDENT
+@undent : /SPACE? /BACKSLASH @indent
 
-alias : label label+
-label : COLON (OP|expr0)?
-keyword : (OP|expr0) COLON
-dot : /DOT (OP|expr0)
-
-comment : COMMENT
-string : /QUOTE (STRING|grouping)* /UNQUOTE
-       | /QUOTE /INDENT (STRING|grouping|NEWLINE)* /DEDENT /UNQUOTE

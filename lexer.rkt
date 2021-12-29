@@ -2,16 +2,18 @@
 (require brag/support syntax/readerr srfi/13)
 
 (define-lex-abbrevs
-  (alpha (:+ alphabetic))
-  (alnum (:+ (:or alphabetic numeric)))
+  (alnums (:+ (:or alphabetic numeric)))
   (comment (:seq spacetabs comment?))
   (comment? (:seq "#!" spacetabs (:+ (:~ newline-char))))
   (digits (:+ (char-set "0123456789")))
-  (identifier (:seq alpha (:? alnum)))
+  (identifier (:seq alphabetic 
+                    (:? alnums)
+                    (:* (:seq "-" alnums))
+                    (:? (char-set "\"'"))))
   (newline-char (char-set "\r\n"))
   (newline (:seq spacetabs? (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
-  (operator (:+ (char-set "+-*/=><?&|`~@$%^_#!")))
+  (operator (:+ (char-set "+-*/=><?!@%$&|")))
   (quoted "\"")
   (quotes "'")
   (semi (:+ (:seq spacetabs? ";" spacetabs?)))
@@ -39,15 +41,10 @@
    [semi token-NEWLINE]
    [comment? (if (= 1 (position-offset start-pos))
                  (token 'COMMENT lexeme)
-                 (rr-error "unexpected #!"))]
+                 (unexpected-hashbang))]
    [identifier (token 'ID (string->symbol lexeme))]
    [operator (if (string-contains? lexeme "#!")
-                 (let ([hashpos (string-contains lexeme "#!")]) 
-                   (rr-error "unexpected #!"
-                             (position-line start-pos)
-                             (+ hashpos (position-col start-pos))
-                             (+ hashpos (position-offset start-pos))
-                             2))
+                 (unexpected-hashbang)
                  (token 'OP (string->symbol lexeme)))]
    [(:or ".." "..." "....") (token 'OP (string->symbol lexeme))]
    [(:or (:+ #\space) (:+ #\tab)) (token 'SPACE lexeme)] 
@@ -63,8 +60,9 @@
    ["," (token 'COMMA lexeme)]
    [":" (token 'COLON ':)]
    ["." (token 'DOT lexeme)]
-   [(:seq digits "." digits) (token 'DECIMAL (string->number lexeme))]
-   [digits (token 'INTEGER (string->number lexeme))]
+   [(:+ ",") (rr-error (string-append "unexpected " lexeme))]
+   [(:seq (:? "-") digits) (token 'INTEGER (string->number lexeme))]
+   [(:seq (:? "-") digits "." digits) (token 'DECIMAL (string->number lexeme))]
    [(:seq quotes nextloc) multi-quotes]
    [(:seq quoted nextloc) multi-quoted]
    [quotes string-quotes]
@@ -179,6 +177,14 @@
                               (position-col start-pos)
                               (position-offset start-pos)
                               (if (string? lexeme) (string-length lexeme) 0))])
+
+(define-macro unexpected-hashbang
+  #'(let ([hashpos (string-contains lexeme "#!")]) 
+      (rr-error "unexpected #!"
+                (position-line start-pos)
+                (+ hashpos (position-col start-pos))
+                (+ hashpos (position-offset start-pos))
+                2)))
 
 (define _mode main-lexer)
 (define modes '())
