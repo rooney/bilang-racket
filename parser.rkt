@@ -25,17 +25,16 @@ return : /NEWLINE? expr4
 apply3  : exprZ /NEWLINE expr3
 kQz     : (applyK0|applyKO|Kc|exprQ) /SPACE _Qz
 @_Qz    : kQz | Qz
-Qz      : (label|OP) (/SPACE (exprZ|Qz)|dent)
-@Kc     : exprK c
-        | exprZ /NEWLINE c
-@c      : /COMMA | PIPE
+Qz      : (label|op) (/SPACE (exprZ|Qz)|dent)
+@Kc     : exprK /COMMA
+        | exprZ /NEWLINE /COMMA
 applyK1 : (Kc|applyK0|applyKO) (/SPACE expr1|dent)
 applyK0 : (Kc|applyK0) (dot|group)
-applyKO : (Kc|applyK0) OP
-        | exprZ /NEWLINE OP
+applyKO : (Kc|applyK0) op
+        | exprZ /NEWLINE op
 apply1  : exprQ (/SPACE expr1|dent)
-applyQ  : begin (label|exprQ|OP)?
-        | label (label|exprO)
+applyQ  : begin (label|exprQ|op)?
+        | label (label|exprQ|op)
 applyO  : expr0 op
         | expr0 dot
 apply0  : exprO group
