@@ -1,19 +1,24 @@
 #lang brag
-return : /NEWLINE? expr4
+return : /INDENT expr4 /DEDENT /NEWLINE?
+       | /newb? expr4
 
 @expr4 : expr3 (/SPACE|/NEWLINE|/INDENT/DEDENT)?
 @expr3 : apply3
-       | exprZ
-@exprZ : kQz
+       | applyE
+       | exprM
+@exprM : applyM
+       | expr2
+@expr2 : apply2
        | exprK
-@exprK : applyK1
-       | applyK0
-       | applyKO
-       | Kc
+@exprK : applyK
+       | exprJ
+@exprJ : applyJ1
+       | applyJ0
+       | applyJO
        | expr1
 @expr1 : apply1
-       | exprQ
-@exprQ : applyQ
+       | exprB
+@exprB : applyB
        | symbol
        | exprO
 @exprO : applyO
@@ -22,19 +27,21 @@ return : /NEWLINE? expr4
 @expr0 : apply0
        | e
 
-apply3  : exprZ /NEWLINE expr3
-kQz     : (applyK0|applyKO|Kc|exprQ) /SPACE _Qz
-@_Qz    : kQz | Qz
-Qz      : (label|op) (/SPACE (exprZ|Qz)|dent)
-@Kc     : exprK /COMMA
-        | exprZ /NEWLINE /COMMA
-applyK1 : (Kc|applyK0|applyKO) (/SPACE expr1|dent)
-applyK0 : (Kc|applyK0) (dot|group)
-applyKO : (Kc|applyK0) op
-        | exprZ /NEWLINE op
-apply1  : exprQ (/SPACE expr1|dent)
-applyQ  : begin (label|exprQ|op)?
-        | label (label|exprQ|op)
+apply3  : expr2 /newb expr3
+applyE  : applyM /NEWLINE expr3
+applyM  : (exprK /SPACE)? op (/SPACE exprM)?
+apply2  : exprK dent
+applyK  : (xJ|applyJ0|applyJO|exprB) /SPACE (applyK|keyv1)
+@xJ     : exprJ /COMMA
+        | expr2 /newb COMMA
+applyJ1 : expr2 /NEWLINE (keyv0|keyv1)
+        | expr2 /NEWLINE op (dent|/SPACE expr1)?
+        | (xJ|applyJ0|applyJO) (dent|/SPACE expr1)
+applyJ0 : (xJ|applyJ0|applyJO) (dot|group)
+applyJO : (xJ|applyJ0) op
+
+apply1  : exprB (/SPACE keyv0)* /SPACE (keyv0|expr1)
+applyB  : begin (symbol|exprO|op|dent)?
 applyO  : expr0 op
         | expr0 dot
 apply0  : exprO group
@@ -45,24 +52,26 @@ apply0  : exprO group
    | string
    | group
 
-id : (num|OP)? ID
+id : OP? num? ID
    | @id (op|dot)
 
-op : OP
-key : (OP|@id|@num)+
-label : key COLON
+op     : OP
+@key   : (OP|@id|num)+
+keyv0  : keys (symbol|exprO|op|dent)
+keyv1  : keys /SPACE exprJ
+@keys  : (keyc /SPACE?)* keyc
+@keyc  : key COLON
 symbol : (COLON key?)? COLON (op|id)?
-dot : /DOT (OP|@id|group)
-@num : INTEGER | DECIMAL
+dot    : /DOT (OP|@id|group)
+@num   : INTEGER | DECIMAL
 string : /QUOTE (STRING|group)* /UNQUOTE
        | /QUOTE /INDENT (STRING|group|NEWLINE)* /DEDENT /UNQUOTE
 
+newb   : NEWLINE | BLANKLINE
 @begin : BPAREN | BBRACE | BBRACKET
-group : /LPAREN expr4 /RPAREN
-      | /LBRACE expr4 /RBRACE
-      | /LBRACKET expr4 /RBRACKET
-      | /BQUOTE indent
-@dent : indent | undent
-indent : /INDENT expr4 /DEDENT
-@undent : /SPACE? /BACKSLASH @indent
+group  : /LPAREN expr4 /RPAREN
+       | /LBRACE expr4 /RBRACE
+       | /LBRACKET expr4 /RBRACKET
+       | /BQUOTE dent
+dent : /INDENT expr4 /DEDENT
 
