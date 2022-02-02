@@ -1,33 +1,27 @@
 #lang br
-(require brag/support syntax/readerr srfi/13)
-
-(struct jumpto (level))
+(require brag/support syntax/readerr)
 
 (define-lex-abbrevs
   (alnums (:+ (:or alphabetic numeric)))
   (digits (:+ (char-set "0123456789")))
   (identifier (:seq alphabetic 
                     (:? alnums)
-                    (:* (:seq (char-set "-/") alnums))
-                    (:? (char-set "\"'`"))))
+                    (:* (:seq (char-set "-/") alnums))))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
   (operator (:+ (:or ".." "..." (char-set "+-*/=><?!#%@$&|\\"))))
   (quoted "\"")
   (quotes "'")
+  (quoteb "`")
   (spacetabs (:+ (:or #\space #\tab))))
-
-
 
 (define main-lexer
   (lexer-srcloc
    [nextloc (let ([numlines (- (position-line end-pos) (position-line start-pos))])
               (measure-dent! (lastline lexeme))
               (cond
-                [(= _curdent _curlevel)
-                 (cond [(> numlines 1) (token 'BLANKLINE (sub1 numlines))]
-                       [else token-NEWLINE])]
+                [(= _curdent _curlevel) token-NEWLINE]
                 [(> _curdent _curlevel)
                  (let ([next-level (add1 _curlevel)])
                    (cond [(= _curdent next-level) (indent!)]
@@ -52,17 +46,18 @@
    [identifier (token 'ID (string->symbol lexeme))]
    [operator (token 'OP (string->symbol lexeme))]
    [(:+ (:or ",," ",,,")) (rr-error (string-append "unexpected " lexeme))]
-   [",:" (token 'PIPE 'pipe:)]
    ["," (token 'COMMA lexeme)]
    [":" (token 'COLON ':)]
    ["." (token 'DOT lexeme)]
    ["(" token-LPAREN]
-   ["[" token-LBRACKET]
+   ["[" token-LBRACK]
    ["{" (token-LBRACE!)]
    [")" token-RPAREN]
-   ["]" token-RBRACKET]
+   ["]" token-RBRACK]
    ["}" (token-RBRACE!)]
    [(eof) (void/unless (unlevel!))]))
+
+(struct jumpto (level))
 
 (define-macro (string-lexer (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(lexer-srcloc CUSTOM-RULES ...
@@ -216,9 +211,9 @@
   (list (token 'LPAREN ''LPAREN)
         (token 'BPAREN 'paren)))
 
-(define token-LBRACKET
-  (list (token 'LBRACKET ''LBRACKET)
-        (token 'BBRACKET 'bracket)))
+(define token-LBRACK
+  (list (token 'LBRACK ''LBRACK)
+        (token 'BBRACK 'bracket)))
 
 (define (token-LBRACE!)
   (push-mode! main-lexer)
@@ -228,8 +223,8 @@
 (define token-RPAREN
   (token 'RPAREN ''RPAREN))
 
-(define token-RBRACKET
-  (token 'RBRACKET ''RBRACKET))
+(define token-RBRACK
+  (token 'RBRACK ''RBRACK))
 
 (define (token-RBRACE!)
   (pop-mode!)
