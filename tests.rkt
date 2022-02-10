@@ -217,13 +217,13 @@ EOF
 							 (grouping (_Qx (applyO brace (label :)) (_Qx => Boolean))))))))))))
 
 (test #<<EOF
-output '
+put '
 	<table class='theme-`
 		db.query1 '
 			SELECT name FROM themes
 			WHERE user-id = `
 				session.user.id
-		else: 'default
+		else: -> `default
 	'>
 		<tr>
 			<td>`
@@ -266,3 +266,6 @@ EOF
 					"</tr>"
 					"\n"
 					"</table>"))))
+
+'
+	`{`{\raw \n \`ere}} \no\t \raw

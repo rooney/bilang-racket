@@ -1,8 +1,8 @@
 #lang brag
-return : /NEWLINE? expr4
-       | /INDENT expr4 /DEDENT /NEWLINE?
+return : /feed? expr4
+       | /INDENT expr4 /DEDENT /feed?
 
-@expr4 : expr3 (/SPACE|/NEWLINE|/INDENT/DEDENT)?
+@expr4 : expr3 (/SPACE|/feed|/INDENT/DEDENT)?
 @expr3 : apply3
        | applyE
        | exprM
@@ -28,18 +28,19 @@ return : /NEWLINE? expr4
 @expr0 : apply0
        | e
 
-apply3  : expr2 /NEWLINE expr3
-applyE  : @applyM /NEWLINE expr3
+apply3  : apply2 expr3
+        | exprK /feed expr3
+applyE  : @applyM /feed expr3
 applyM  : ( begin?        nuke /SPACE 
           | exprK /SPACE (nuke /SPACE)?
           )? op (/SPACE exprM|dent)?
 apply2  : exprK dent
 applyK  : (@applyJ|applyJO|exprB) /SPACE (applyK|kv1)
-        | exprM /NEWLINE kv1
-applyJ  : exprM /NEWLINE /COMMA
+        | exprM /feed kv1
+applyJ  : exprM (/feed|/SPACE) /COMMA
         | exprJ /COMMA
 applyJO : @applyJ (exprD|op|kv0)
-applyJ1 : exprM /NEWLINE kv0 (/SPACE kv0)* (/SPACE expr1)?
+applyJ1 : exprM /feed kv0 (/SPACE kv0)* (/SPACE expr1)?
         | (@applyJ|applyJO)  (/SPACE kv0)* /SPACE (kv0|expr1)
 apply1  : exprB              (/SPACE kv0)* /SPACE (kv0|expr1)
 applyB  : begin (exprD|op)?
@@ -62,13 +63,13 @@ atom   : (COLON part?)? COLON (@id|op)?
 ion    : /DOT (@id|op)
 @part  : (OP|ID|num)+
 @num   : INTEGER | DECIMAL
-string : /QUOTE (STRING|group)* /UNQUOTE
+string : /QUOTE (QUOTE|STRING|group|UNQUOTE)* /UNQUOTE
        | /QUOTE /INDENT (STRING|group|NEWLINE)* /DEDENT /UNQUOTE
 
-@begin : BPAREN | BBRACE | BBRACK
-group  : /LPAREN expr4 /RPAREN
+@begin : PAREN | BRACE | BRACKET
+group  : BQUOTE dent
+       | /LPAREN expr4 /RPAREN
        | /LBRACE expr4 /RBRACE
        | /LBRACK expr4 /RBRACK
-       | /BQUOTE dent
 dent   : /INDENT expr4 /DEDENT
-
+feed   : /NEWLINE+
