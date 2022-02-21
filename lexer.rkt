@@ -47,7 +47,7 @@
    [#\] token-RBRACK]
    [#\{ (token-LBRACE!)]
    [#\} (token-RBRACE!)]
-   [#\: (token 'COLON ':)]
+   [#\: (token 'ELECTRON ':)]
    [#\. (token 'DOT lexeme)]
    [#\, (token 'COMMA lexeme)]
    [(:+ #\,) (rr-error (string-append "Unexpected " lexeme))]
@@ -237,6 +237,7 @@
       (append (concat-if (> num-feed 0)
                          (make-list num-feed (token-NEWLINE)))
               dedents
+              (append-if (equal? _mode main-lexer) (token-NEWLINE))
               (append-if (and (> _level 0)
                               (> _dent _level))
                          (token-STRING (- _dent _level) #\tab)))))
@@ -268,28 +269,24 @@
   (token 'STRING (make-string count char)))
 
 (define token-LPAREN
-  (list (token 'LPAREN ''LPAREN)
-        (token 'PAREN 'paren)))
+  (token 'LPAREN ''LPAREN))
 
 (define token-RPAREN
   (token 'RPAREN ''RPAREN))
 
 (define token-LBRACK
-  (list (token 'LBRACK ''LBRACK)
-        (token 'BRACKET 'bracket)))
+  (token 'LBRACK ''LBRACK))
 
 (define token-RBRACK
   (token 'RBRACK ''RBRACK))
 
 (define (token-LBRACE!)
   (push-mode! main-lexer)
-  (list (token 'LBRACE _mode)
-        (token 'BRACE 'brace)))
+  (token 'LBRACE _mode))
 
 (define-macro token-RBRACE!
-  #'(begin (cond [(empty? _suspends) (rr-error "No matching pair")])
-           (pop-mode!)
-           (token 'RBRACE _mode)))
+  #'(cond [(empty? _suspends) (rr-error "No matching pair")]
+          [else (pop-mode!) (token 'RBRACE _mode)]))
 
 (define (token-QUOTE! lexer)
   (push-mode! lexer)
