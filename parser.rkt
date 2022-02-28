@@ -4,7 +4,8 @@ expres : /feed? expre
 
 @expre : expr3 /trail?
 @expr3 : apply3
-       | applyM
+       | exprM
+@exprM : applyM
        | expr2
 @expr2 : apply2
        | exprZ
@@ -55,9 +56,9 @@ mbot    : (expjkv feed)* (expjkv|
 
 apply3  : expr2 /feed expr3
 applyZK : expr2 /feed kv1
-applyZ  : expr2 /feed /COMMA
+applyZ  : expr2 /feed /COMMA | exprM /feed /SEMI
 apply2  : exprZ dent
-applyj  : exprJ /COMMA
+applyj  : exprJ /COMMA | exprM /SEMI
 applyJ  : @applyj | @applyZ
 applyJC : @applyJ | applyJ0
 applyJ0 : @applyJ (exprD|op|kv0|kv2)

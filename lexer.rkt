@@ -57,6 +57,7 @@
    [#\} (token-RBRACE!)]
    [#\: (token 'ELECTRON ':)]
    [#\. (token 'DOT lexeme)]
+   [#\; (token 'SEMI lexeme)]
    [#\, (token 'COMMA lexeme)]
    [(:+ #\,) (rr-error (string-append "Unexpected " lexeme))]
    [(eof) (if (> _level 0)
