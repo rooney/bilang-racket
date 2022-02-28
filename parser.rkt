@@ -91,8 +91,8 @@ string : /QUOTE /INDENT (STRING|group|NEWLINE)* /DEDENT /UNQUOTE
        | /QUOTE /LBRACE (STRING|group|LBRACE|RBRACE)* /RBRACE
        | /QUOTE         (STRING|group)* /UNQUOTE
 group  : BQUOTE dent
-       | /LPAREN expre /RPAREN
-       | /LBRACE expre /RBRACE
-       | /LBRACK expre /RBRACK
+       | /LPAREN (expre | @dent /feed) /RPAREN
+       | /LBRACE (expre | @dent /feed) /RBRACE
+       | /LBRACK (expre | @dent /feed) /RBRACK
 dent   : /INDENT expre /DEDENT
 trail  : /SPACE | /feed | /INDENT /DEDENT
