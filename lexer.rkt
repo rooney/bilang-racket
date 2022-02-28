@@ -74,8 +74,8 @@
 
 (define-macro (bracelex BASE)
   #'(BASE (#\{ #\})
-          [#\{ (token-QUOTE! _mode)]
-          [#\} (token-UNQUOTE!)]
+          [#\{ (token-LBRACE! _mode)]
+          [#\} (token-RBRACE!)]
           [newline-char unterminated-string]
           [(eof) unterminated-string]))
 
@@ -104,10 +104,12 @@
                                         (cap-level! 0))])))
 
 (define-macro s-brace
-  #'(token-QUOTE! (bracelex strlex)))
+  #'(list (token 'QUOTE _mode)
+          (token-LBRACE! (bracelex strlex))))
 
 (define-macro b-brace
-  #'(token-QUOTE! (bracelex strlex+)))
+  #'(list (token 'QUOTE _mode)
+          (token-LBRACE! (bracelex strlex+))))
 
 (define-macro d-block
   #'(append (list (token-QUOTE! (lexer-srcloc [d-quote (token-UNQUOTE!)]
@@ -149,6 +151,8 @@
          (string-prefix? STR PREFIX)))
 
 (define eschar #hash(("`" . "`")
+                     ("{" . "{")
+                     ("}" . "}")
                      ("n" . "\n")
                      ("r" . "\r")
                      ("t" . "\t")
@@ -269,32 +273,32 @@
   (token 'STRING (make-string count char)))
 
 (define token-LPAREN
-  (token 'LPAREN ''LPAREN))
+  (token 'LPAREN "("))
 
 (define token-RPAREN
-  (token 'RPAREN ''RPAREN))
+  (token 'RPAREN "("))
 
 (define token-LBRACK
-  (token 'LBRACK ''LBRACK))
+  (token 'LBRACK "["))
 
 (define token-RBRACK
-  (token 'RBRACK ''RBRACK))
+  (token 'RBRACK "]"))
 
-(define (token-LBRACE!)
-  (push-mode! main-lexer)
-  (token 'LBRACE _mode))
+(define (token-LBRACE! [lexer main-lexer])
+  (push-mode! lexer)
+  (token 'LBRACE "{"))
 
 (define-macro token-RBRACE!
   #'(cond [(empty? _suspends) (rr-error "No matching pair")]
-          [else (pop-mode!) (token 'RBRACE _mode)]))
+          [else (pop-mode!) (token 'RBRACE "}")]))
 
 (define (token-QUOTE! lexer)
   (push-mode! lexer)
-  (token 'QUOTE "{"))
+  (token 'QUOTE _mode))
 
 (define (token-UNQUOTE!)
   (pop-mode!)
-  (token 'UNQUOTE "}"))
+  (token 'UNQUOTE _mode))
 
 (define (bilang-lexer ip)
   (if (empty? pending-tokens)
