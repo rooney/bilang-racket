@@ -9,6 +9,7 @@ expres : /feed? expre
 @expr2 : apply2
        | exprZ
 @exprZ : applyZ
+       | applyZK
        | exprK
 @exprK : applyk
        | exprJ
@@ -42,23 +43,22 @@ mdent   : @dent
         | /INDENT (kv2 (/feed /COMMA)? | exprkv) /trail? /DEDENT
 mbot    : (expjkv feed)* (expjkv| 
           j0j0_? kvjj0_* expr3)
-@expjkv : j0j0_? kvjj0_* (kv0j|kv1|kv2j)
-        | j0j0_? kvjj0_* kvjj0
-        | j0j0
+@expjkv : j0j0_? kvjj0_* (kv1|kv2|kvjj0 dent?)
+        | j0j0 dent?
 @exprkv : kvjj0_* (exprK|kv0j|kv1)
-@kvjj0  : kv0 j0j0
-@kvjj0_ : kv0 j0j0_
+@j0j0   : (COMMA (kv0|op|exprD)?)+
+@j0j0_  : j0j0 SPACE
+@kvjj0  : kv0 j0j0?
+@kvjj0_ : kvjj0 SPACE
 @kv0j   : kv0 COMMA?
 @kv2j   : kv2 (/feed COMMA)?
-@j0j0   : (COMMA (kv0|op|exprD)?)+
-@j0j0_  : j0j0 /SPACE
 
 apply3  : expr2 /feed expr3
-applyZ  : expr2 /feed kv1
-        | expr2 /feed /COMMA
+applyZK : expr2 /feed kv1
+applyZ  : expr2 /feed /COMMA
 apply2  : exprZ dent
 applyj  : exprJ /COMMA
-applyJ  : @applyj | applyZ
+applyJ  : @applyj | @applyZ
 applyJC : @applyJ | applyJ0
 applyJ0 : @applyJ (exprD|op|kv0|kv2)
 applyJ1 : expr2 /feed (kv0 (/SPACE kv0)* (/SPACE expr1|kv2)?|kv2)
