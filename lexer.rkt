@@ -9,6 +9,7 @@
   (identifier (:seq alphabetic (:? alnums)
                     (:* (:seq (:or "-" "--" "/" "/-")
                               alnums))))
+  (id-prime (:seq identifier (:or d-quote s-quote b-quote)))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
@@ -39,6 +40,13 @@
    [d-quote d-str]
    [s-quote s-str]
    [b-quote b-str]
+   [(:seq id-prime any-char)
+    (let* ([length (string-length lexeme)]
+           [lastchar (string-ref lexeme (sub1 length))]
+           [drop (if (index-of (list #\space #\tab #\return #\newline) lastchar) 1 2)])
+      (rewind! drop)
+      (token 'ID (string->symbol (substring lexeme 0 (- length drop)))))]
+   [id-prime (token 'ID (string->symbol lexeme))]
    [identifier (token 'ID (string->symbol lexeme))]
    [operator (token 'OP (string->symbol lexeme))]
    [#\( token-LPAREN]
@@ -93,13 +101,13 @@
 
 (define-macro s-str
   #'(token-QUOTE! (strlex (#\space #\tab #\,)
-                          [(:or #\space #\tab #\, newline-char) (begin rewind! (token-UNQUOTE!))]
+                          [(:or #\space #\tab #\, newline-char) (begin (rewind!) (token-UNQUOTE!))]
                           [(eof) (cons (token-UNQUOTE!)
                                        (cap-level! 0))])))
 
 (define-macro b-str
   #'(token-QUOTE! (strlex+ ()
-                           [newline-char (begin rewind! (token-UNQUOTE!))]
+                           [newline-char (begin (rewind!) (token-UNQUOTE!))]
                            [(eof) (cons (token-UNQUOTE!)
                                         (cap-level! 0))])))
 
@@ -194,8 +202,9 @@
 (define (debug x)
   (println x) x)
 
-(define-macro rewind!
-  #'(file-position input-port (- (file-position input-port) (string-length lexeme))))
+(define-macro-cases rewind!
+  [(rewind!)        #'(rewind! (string-length lexeme))]
+  [(rewind! LENGTH) #'(file-position input-port (- (file-position input-port) LENGTH))])
 
 (define _mode main-lexer)
 (define _suspends '())
