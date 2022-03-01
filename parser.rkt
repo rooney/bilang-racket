@@ -87,12 +87,13 @@ ion    : /DOT (@id|op)
 id     : op? num? ID op? ion*
 num    : INTEGER | DECIMAL
 feed   : /NEWLINE+
-string : /QUOTE /INDENT (STRING|group|NEWLINE)* /DEDENT /UNQUOTE
-       | /QUOTE /LBRACE (STRING|group|LBRACE|RBRACE)* /RBRACE
-       | /QUOTE         (STRING|group)* /UNQUOTE
-group  : BQUOTE dent
-       | /LPAREN (expre | @dent /feed) /RPAREN
-       | /LBRACE (expre | @dent /feed) /RBRACE
-       | /LBRACK (expre | @dent /feed) /RBRACK
+string : /QUOTE /INDENT (STRING|interp|braces|NEWLINE)* /DEDENT /UNQUOTE
+       | /QUOTE /LBRACE (STRING|interp|braces|LBRACE|RBRACE)* /RBRACE
+       | /QUOTE         (STRING|interp|braces)* /UNQUOTE
+@group : interp | parens| braces | bracks
+interp : BQUOTE dent
+parens : /LPAREN (expre|@dent /feed) /RPAREN
+braces : /LBRACE (expre|@dent /feed) /RBRACE
+bracks : /LBRACK (expre|@dent /feed) /RBRACK
 dent   : /INDENT expre /DEDENT
 trail  : /SPACE | /feed | /INDENT /DEDENT
