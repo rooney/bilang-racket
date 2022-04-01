@@ -5,16 +5,26 @@
   (digit (char-set "0123456789"))
   (digits (:+ digit))
   (hex (:or digit (char-set "abcdefABCDEF")))
+  (integer (:seq (:? #\-) digits (:* (:seq #\_ digits))))
+  (decimal (:seq integer #\. digits))
   (alnums (:+ (:or alphabetic numeric)))
-  (identifier (:seq alphabetic (:? alnums)
-                    (:* (:seq (:or "-" "--" "/" "/-")
-                              alnums))))
-  (id-prime (:seq identifier (:or d-quote s-quote b-quote)))
+  (identifier (:seq (:? (:- numeric digit))
+                    alphabetic
+                    (:? alnums)
+                    (:* (:seq (:* operid) alnums))))
+  (id-prime (:seq identifier quot))
+  (proton (:+ (:or identifier operator integer decimal)))
+  (atom (:seq electron proton))
+  (atom-prime (:seq atom quot))
+  (electron #\:)
+  (nuke (:seq proton (:? quot) electron))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
   (operator (:+ (:or (char-set "+*/\\-~=><?!&|^#%$@") ".." "..."
                      (char-set "±÷√∫∂¬≈≠≥≤¿¡«»‹›‰§®©¢€£¥™°∞·…„"))))
+  (operid (:+ (char-set "+/-><?")))
+  (quot (:or d-quote s-quote b-quote))
   (d-quote #\")
   (s-quote #\')
   (b-quote #\`)
@@ -30,8 +40,8 @@
                 [(= dent _level) (token-NEWLINE)]
                 [(< dent _level) (cap-level! dent)]))]
    [spacetabs (token 'SPACE lexeme)]
-   [(:seq (:? #\-) digits) (token 'INTEGER (string->number lexeme))]
-   [(:seq (:? #\-) digits #\. digits) (token 'DECIMAL (string->number lexeme))]
+   [integer (token 'INTEGER (string->number lexeme))]
+   [decimal (token 'DECIMAL (string->number lexeme))]
    [(:seq d-quote nextloc) d-block]
    [(:seq s-quote nextloc) s-block]
    [(:seq b-quote nextloc) b-block]
@@ -40,14 +50,15 @@
    [d-quote d-str]
    [s-quote s-str]
    [b-quote b-str]
-   [(:seq id-prime any-char)
-    (let* ([length (string-length lexeme)]
-           [lastchar (string-ref lexeme (sub1 length))]
-           [drop (if (index-of (list #\space #\tab #\return #\newline) lastchar) 1 2)])
-      (rewind! drop)
-      (token 'ID (string->symbol (substring lexeme 0 (- length drop)))))]
+   [(:seq id-prime any-char) (prime? 'ID)]
    [id-prime (token 'ID (string->symbol lexeme))]
    [identifier (token 'ID (string->symbol lexeme))]
+   [(:seq atom-prime any-char) (prime? 'ATOM)]
+   [atom-prime (token 'ATOM (string->symbol lexeme))]
+   [atom (token 'ATOM (string->symbol lexeme))]
+   [electron (token 'ATOM (string->symbol lexeme))]
+   [nuke (token 'NUKE (string->symbol lexeme))]
+   [operid (token 'OPID (string->symbol lexeme))]
    [operator (token 'OP (string->symbol lexeme))]
    [#\( token-LPAREN]
    [#\) token-RPAREN]
@@ -55,14 +66,20 @@
    [#\] token-RBRACK]
    [#\{ (token-LBRACE!)]
    [#\} (token-RBRACE!)]
-   [#\: (token 'ELECTRON ':)]
-   [#\. (token 'DOT lexeme)]
-   [#\; (token 'SEMI lexeme)]
-   [#\, (token 'COMMA lexeme)]
+   [#\. (token 'DOT (string->symbol lexeme))]
+   [#\; (token 'SEMI (string->symbol lexeme))]
+   [#\, (token 'COMMA (string->symbol lexeme))]
    [(:+ #\,) (rr-error (string-append "Unexpected " lexeme))]
    [(eof) (if (> _level 0)
               (cap-level! 0) 
               (void))]))
+
+(define-macro (prime? SYMBOL)
+  #'(let* ([length (string-length lexeme)]
+           [lastchar (string-ref lexeme (sub1 length))]
+           [drop (if (index-of (list #\space #\tab #\return #\newline) lastchar) 1 2)])
+      (rewind! drop)
+      (token SYMBOL (string->symbol (substring lexeme 0 (- length drop))))))
 
 (define-macro (strlex (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(lexer-srcloc CUSTOM-RULES ...

@@ -2,98 +2,51 @@
 expres : /feed? expre
        | /INDENT expre /DEDENT /feed?
 
-@expre : expr3 /trail?
-@expr3 : apply3
-       | exprM
-@exprM : applyM
-       | expr2
-@expr2 : apply2
-       | exprZ
-@exprZ : applyZ
-       | applyZK
-       | exprK
-@exprK : applyk
-       | exprJ
-@exprJ : applyj
-       | applyJ0
-       | applyJ1
+@expre : exprK /trail?
+@exprK : exprJ
+@exprJ : applyJ
        | expr1
 @expr1 : apply1
-       | exprD
-@exprD : id
-       | atom
        | exprO
 @exprO : applyO
+       | atom
        | expr0
 @expr0 : apply0
+       | applyG
+       | dot
        | e
 
-macro   : OP (/COMMA OP)*
-applyM  : m1 | m2 | m3
-@m1     : mleft macro
-        | mleft? macro (mright | /SPACE (m1d|m2d))
-@m1d    : middle macro (mright | /SPACE (m1d|m2d))
-@m2d    : middle macro mright? mdent
-@m2     : mleft? macro mright? mdent
-@m3     : (m1|m2|macro) /feed mbot
-@kvnuke : exprkv | (exprkv /SPACE)? nuke
-mleft   : (exprK | (exprK /SPACE)? nuke) /SPACE
-middle  : kvnuke /SPACE
-mright  : /SPACE kvnuke
-mdent   : @dent
-        | /INDENT (kv2 (/feed /COMMA)? | exprkv) /trail? /DEDENT
-mbot    : (expjkv feed)* (expjkv| 
-          j0j0_? kvjj0_* expr3)
-@expjkv : j0j0_? kvjj0_* (kv1|kv2|kvjj0 dent?)
-        | j0j0 dent?
-@exprkv : kvjj0_* (exprK|kv0j|kv1)
-@j0j0   : (COMMA (kv0|op|exprD)?)+
-@j0j0_  : j0j0 SPACE
-@kvjj0  : kv0 j0j0?
-@kvjj0_ : kvjj0 SPACE
-@kv0j   : kv0 COMMA?
-@kv2j   : kv2 (/feed COMMA)?
-
-apply3  : expr2 /feed expr3
-applyZK : expr2 /feed kv1
-applyZ  : expr2 /feed /COMMA | exprM /feed /SEMI
-apply2  : exprZ dent
-applyj  : exprJ /COMMA | exprM /SEMI
-applyJ  : @applyj | @applyZ
-applyJC : @applyJ | applyJ0
-applyJ0 : @applyJ (exprD|op|kv0|kv2)
-applyJ1 : expr2 /feed (kv0 (/SPACE kv0)* (/SPACE expr1|kv2)?|kv2)
-        | @applyJC         (/SPACE kv0)* /SPACE (expr1|kv0|kv2)
-apply1  :           exprD  (/SPACE kv0)* /SPACE (expr1|kv0|kv2)
-applyk  : (@applyJC|exprD) (/SPACE kv0)* /SPACE (applyk|kv1)
+applyJ  : expr1 j+
+j       : /COMMA (exprO|dot+|dot* op) (/SPACE expr1)?
+apply1  : exprO (/SPACE kv0)* /SPACE (kv0|expr1)
 applyO  : expr0 op
-apply0  : exprO ion
-        | exprD (group|string)
-        | op e
+apply0  : expr0 dot
+        | (applyG|group|string|op) e
+applyG  : exprO group
+        | expr0 string
 
 @e : num
    | string
    | group
-   | ion
+   | id
 
-op     : OP
-kv0    : @nuke (exprD|op)
-kv1    : @nuke /SPACE exprJ
+id     : OPID? @num? OPID? ID OPID?
+op     : OPID | OP
+kv0    : @nuke (exprO|op)
+kv1    : @nuke /SPACE expr1
 kv2    : @nuke dent
-nuke   : (@proton ELECTRON /SPACE?)* @proton ELECTRON
-atom   : (ELECTRON @proton?)? ELECTRON (@id|op)?
-proton : (OP|ID|num)+
-ion    : /DOT (@id|op)
-id     : op? num? ID op? ion*
+nuke   : (NUKE /SPACE?)* NUKE
+atom   : ATOM ATOM?
+dot    : /DOT (@op|@id)
 num    : INTEGER | DECIMAL
 feed   : /NEWLINE+
 string : /QUOTE /INDENT (STRING|interp|braces|NEWLINE)* /DEDENT /UNQUOTE
        | /QUOTE /LBRACE (STRING|interp|braces|LBRACE|RBRACE)* /RBRACE
        | /QUOTE         (STRING|interp|braces)* /UNQUOTE
-@group : interp | parens| braces | bracks
-interp : BQUOTE dent
+@group : parens | interp | bracks | braces
 parens : /LPAREN (expre|@dent /feed) /RPAREN
-braces : /LBRACE (expre|@dent /feed) /RBRACE
 bracks : /LBRACK (expre|@dent /feed) /RBRACK
+braces : /LBRACE (expre|@dent /feed) /RBRACE
 dent   : /INDENT expre /DEDENT
 trail  : /SPACE | /feed | /INDENT /DEDENT
+interp : BQUOTE dent
