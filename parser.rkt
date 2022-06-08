@@ -1,52 +1,51 @@
 #lang brag
 expres : /feed? expre
-       | /INDENT expre /DEDENT /feed?
-
-@expre : exprK /trail?
+@expre : exprK /(SPACE|feed|excess)?
 @exprK : exprJ
 @exprJ : applyJ
        | expr1
 @expr1 : apply1
-       | exprO
-@exprO : applyO
-       | atom
        | expr0
-@expr0 : apply0
-       | applyG
+@expr0 : e0
        | dot
-       | e
+       | atom
+       | prod
+       | group
+       | applyG
+       | apply0
 
 applyJ  : expr1 j+
-j       : /COMMA (exprO|dot+|dot* op) (/SPACE expr1)?
-apply1  : exprO (/SPACE kv0)* /SPACE (kv0|expr1)
-applyO  : expr0 op
-apply0  : expr0 dot
-        | (applyG|group|string|op) e
-applyG  : exprO group
-        | expr0 string
+j       : /COMMA (expr0|dot+|dot* op) (/SPACE expr1)?
+apply1  : expr0 (/SPACE kv0)* /SPACE (kv0|expr1)
+apply0  : expr0 op
+        | (expr0|op) dot
+        | (group|op|applyG) e0
+        | num id
+applyG  : (expr0|op) group
 
-@e : num
-   | string
-   | group
-   | id
+@e0 : edot
+    | num
+    | id
 
-id     : OPID? @num? OPID? ID OPID?
-op     : OPID | OP
-kv0    : @nuke (exprO|op)
+edot   : e0 dot
+num    : INTEGER | DECIMAL
+int    : INTEGER
+id     : ID
+op     : OP
+kv0    : @nuke (expr0|op)
 kv1    : @nuke /SPACE expr1
 kv2    : @nuke dent
 nuke   : (NUKE /SPACE?)* NUKE
-atom   : ATOM ATOM?
-dot    : /DOT (@op|@id)
-num    : INTEGER | DECIMAL
-feed   : /NEWLINE+
-string : /QUOTE /INDENT (STRING|interp|braces|NEWLINE)* /DEDENT /UNQUOTE
-       | /QUOTE /LBRACE (STRING|interp|braces|LBRACE|RBRACE)* /RBRACE
-       | /QUOTE         (STRING|interp|braces)* /UNQUOTE
-@group : parens | interp | bracks | braces
-parens : /LPAREN (expre|@dent /feed) /RPAREN
-bracks : /LBRACK (expre|@dent /feed) /RBRACK
-braces : /LBRACE (expre|@dent /feed) /RBRACE
-dent   : /INDENT expre /DEDENT
-trail  : /SPACE | /feed | /INDENT /DEDENT
+atom   : ATOM? PARAM
+dot    : /DOT (op|id)
+prod   : /PROTECTED (op|id)
+string : /QUOTE /INDENT (STRING|braces|interp|NEWLINE|/LBRACE /NEWLINE /RBRACE)* /DEDENT /UNQUOTE
+       | /QUOTE         (STRING|braces|interp)* /UNQUOTE
 interp : BQUOTE dent
+@group : parens | bracks | braces | interp | string
+parens : /LPAREN (expres|@dent /feed) /RPAREN
+bracks : /LBRACK (expres|@dent /feed) /RBRACK
+braces : /LBRACE (expres|@dent /feed) /RBRACE
+dent   : /INDENT expre /DEDENT
+excess : /INDENT excess? /DEDENT
+feed   : /NEWLINE+
