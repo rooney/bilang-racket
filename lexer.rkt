@@ -5,15 +5,15 @@
   (digit (char-set "0123456789"))
   (digits (:+ digit))
   (hex (:or digit (char-set "abcdefABCDEF")))
-  (integer (:seq (:? #\-) digits (:* (:seq #\_ digits))))
-  (decimal (:seq integer #\. digits))
+  (int (:seq digits (:* (:seq #\_ digits))))
+  (integer (:seq (:? #\-) int))
+  (decimal (:seq integer #\. int))
   (alnums (:+ (:or alphabetic numeric)))
-  (identifier (:seq (:? (:- numeric digit))
-                    alphabetic
+  (identifier (:seq (:or alphabetic (:- numeric digit))
                     (:? alnums)
-                    (:* (:seq (:* operid) alnums))))
+                    (:* (:seq (:? (:or "+" "/" "-" "--" "<-")) alnums))))
   (id-prime (:seq identifier quot))
-  (proton (:+ (:or identifier operator integer decimal)))
+  (proton (:+ (:or identifier operator decimal integer)))
   (atom (:seq electron proton))
   (atom-prime (:seq atom quot))
   (electron #\:)
@@ -23,7 +23,6 @@
   (nextloc (:seq (:+ newline) (:* #\tab)))
   (operator (:+ (:or (char-set "+*/\\-~=><?!&|^#%$@") ".." "..."
                      (char-set "±÷√∫∂¬≈≠≥≤¿¡«»‹›‰§®©¢€£¥™°∞·…„"))))
-  (operid (:+ (char-set "+/-><?")))
   (quot (:or d-quote s-quote b-quote))
   (d-quote #\")
   (s-quote #\')
@@ -58,7 +57,6 @@
    [atom (token 'ATOM (string->symbol lexeme))]
    [electron (token 'ATOM (string->symbol lexeme))]
    [nuke (token 'NUKE (string->symbol lexeme))]
-   [operid (token 'OPID (string->symbol lexeme))]
    [operator (token 'OP (string->symbol lexeme))]
    [#\( token-LPAREN]
    [#\) token-RPAREN]
@@ -86,17 +84,10 @@
                   [(:+ (:~ newline-char CUSTOM-CHARS ...)) (token 'STRING lexeme)]
                   [any-char (token 'STRING lexeme)]))
 
-(define-macro (strlex+ (CUSTOM-CHARS ...) CUSTOM-RULES ...)
-  #'(strlex (b-quote #\\ CUSTOM-CHARS ...)
+(define-macro (interplex (CUSTOM-CHARS ...) CUSTOM-RULES ...)
+  #'(strlex (b-quote CUSTOM-CHARS ...)
             CUSTOM-RULES ...
-            [(:seq b-quote #\{) (begin (save-level!) (token-LBRACE!))]
-            [(:seq "\\u" (:** 0 4 hex)) (unicode-escape 4)]
-            [(:seq "\\U" (:** 0 8 hex)) (unicode-escape 8)]
-            [(:seq #\\ any-char)
-             (let ([char (hash-ref eschar (substring lexeme 1) #f)])
-               (if char (token 'STRING char)
-                   unknown-escape))]
-            [#\\ unknown-escape]))
+            [(:seq b-quote #\{) (begin (save-level!) (token-LBRACE!))]))
 
 (define-macro (bracelex BASE)
   #'(BASE (#\{ #\})
@@ -106,16 +97,15 @@
           [(eof) unterminated-string]))
 
 (define-macro (strblox CUSTOM-RULES ...)
-  #'(strlex+ ()
-             CUSTOM-RULES ...
-             [(:seq (:? #\\) nextloc) (extract-whites)]
-             [(:seq b-quote nextloc) str-interp]))
+  #'(interplex ()
+               CUSTOM-RULES ...
+               [(:seq b-quote nextloc) str-interp]))
 
 (define-macro d-str
-  #'(token-QUOTE! (strlex+ (d-quote)
-                           [d-quote (token-UNQUOTE!)]
-                           [newline-char unterminated-string]
-                           [(eof) unterminated-string])))
+  #'(token-QUOTE! (interplex (d-quote)
+                             [d-quote (token-UNQUOTE!)]
+                             [newline-char unterminated-string]
+                             [(eof) unterminated-string])))
 
 (define-macro s-str
   #'(token-QUOTE! (strlex (#\space #\tab #\,)
@@ -124,10 +114,10 @@
                                        (cap-level! 0))])))
 
 (define-macro b-str
-  #'(token-QUOTE! (strlex+ ()
-                           [newline-char (begin (rewind!) (token-UNQUOTE!))]
-                           [(eof) (cons (token-UNQUOTE!)
-                                        (cap-level! 0))])))
+  #'(token-QUOTE! (interplex ()
+                             [newline-char (begin (rewind!) (token-UNQUOTE!))]
+                             [(eof) (cons (token-UNQUOTE!)
+                                          (cap-level! 0))])))
 
 (define-macro s-brace
   #'(list (token 'QUOTE _mode)
@@ -135,7 +125,7 @@
 
 (define-macro b-brace
   #'(list (token 'QUOTE _mode)
-          (token-LBRACE! (bracelex strlex+))))
+          (token-LBRACE! (bracelex interplex))))
 
 (define-macro d-block
   #'(append (list (token-QUOTE! (lexer-srcloc [d-quote (token-UNQUOTE!)]
@@ -175,15 +165,6 @@
 (define-macro (starts-with? PREFIX STR)
   #'(and (not (equal? eof STR))
          (string-prefix? STR PREFIX)))
-
-(define eschar #hash(("`" . "`")
-                     ("{" . "{")
-                     ("}" . "}")
-                     ("n" . "\n")
-                     ("r" . "\r")
-                     ("t" . "\t")
-                     ("\"" . "\"")
-                     ("\\" . "\\")))
 
 (define-macro (unicode-escape LENGTH)
   #'(if (< (string-length lexeme) (+ 2 LENGTH))
@@ -225,14 +206,14 @@
   [(rewind! LENGTH) #'(file-position input-port (- (file-position input-port) LENGTH))])
 
 (define _mode main-lexer)
-(define _suspends '())
+(define _modestack '())
 
 (define (push-mode! lexer)
-  (push! _suspends _mode)
+  (push! _modestack _mode)
   (set! _mode lexer))
 
 (define (pop-mode!)
-  (set! _mode (pop! _suspends))
+  (set! _mode (pop! _modestack))
   (if (jumpto? _mode)
       (begin (set! _level (jumpto-level _mode))
              (pop-mode!))
@@ -316,7 +297,7 @@
   (token 'LBRACE "{"))
 
 (define-macro token-RBRACE!
-  #'(cond [(empty? _suspends) (rr-error "No matching pair")]
+  #'(cond [(empty? _modestack) (rr-error "No matching pair")]
           [else (pop-mode!) (token 'RBRACE "}")]))
 
 (define (token-QUOTE! lexer)

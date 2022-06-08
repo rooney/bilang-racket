@@ -19,9 +19,16 @@
 (define-macro (applyO E OP)
   #'`(,OP #:post ,E))
 
+(define (op? x)
+  (case x
+    [(+ / - > < ?) #t]
+    [else #f]))
+
 (define-macro-cases apply0
   [(apply0 E (dot . PROP)) #'`(prop PROP ,E)]
-  [(apply0 E E2)           #'`(,E ,E2)])
+  [(apply0 E E2)           #'`(,E ,E2)]
+  [(apply0 E (id X ... Z)) #'`(disambiguate ,E ,(if (op? 'Z) 'A 'B))]
+  )
 
 (define-macro (dot . PROP)
   #''(prop PROP this))
