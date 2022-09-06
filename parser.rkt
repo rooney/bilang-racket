@@ -8,7 +8,7 @@ expres : /feed? expre
        | expr0
 @expr0 : e0
        | dot
-       | atom
+       | param
        | prod
        | group
        | applyG
@@ -36,7 +36,7 @@ kv0    : @nuke (expr0|op)
 kv1    : @nuke /SPACE expr1
 kv2    : @nuke dent
 nuke   : (NUKE /SPACE?)* NUKE
-atom   : ATOM? PARAM
+param  : PARAM? PARAM
 dot    : /DOT (op|id)
 prod   : /PROTECTED (op|id)
 string : /QUOTE /INDENT (STRING|braces|interp|NEWLINE|/LBRACE /NEWLINE /RBRACE)* /DEDENT /UNQUOTE

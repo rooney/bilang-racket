@@ -13,7 +13,7 @@
               (:* (:seq (:or "-" "+" "/" "<-") (:+ alnum)))))
   (identifier (:seq name prime?))
   (name/op (:or name operator))
-  (key (:seq name/op (:+ (:seq (:? #\.) name/op)) prime?))
+  (key (:seq name/op (:* (:seq (:? #\.) name/op)) prime?))
   (arg (:seq key #\:))
   (param (:seq #\: (:? key)))
   (newline-char (char-set "\r\n"))
