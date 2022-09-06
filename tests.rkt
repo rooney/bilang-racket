@@ -266,6 +266,3 @@ EOF
 					"</tr>"
 					"\n"
 					"</table>"))))
-
-'
-	`{`{\raw \n \`ere}} \no\t \raw
