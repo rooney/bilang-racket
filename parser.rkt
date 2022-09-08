@@ -21,13 +21,13 @@ apply0  : expr0 op
         | num id
 applyG  : (expr0|op) group
 
-@e0 : e0dot
+@e0 : edot
     | num
     | id
     | string
 
+edot   : e0 dot
 func   : param+ brace
-e0dot  : e0 dot
 num    : INTEGER | DECIMAL
 int    : INTEGER
 id     : ID
@@ -38,9 +38,9 @@ kv2    : @arg dent
 arg    : (ARG /SPACE?)* ARG
 param  : PARAM? PARAM
 dot    : /DOT (op|id)
-string : /QUOTE /INDENT (STRING|brace|interp|NEWLINE)* /DEDENT /UNQUOTE
-       | /QUOTE         (STRING|brace|interp)*                 /UNQUOTE
-interp : INTERP dent
+string : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
+       | /QUOTE         (STRING|interp)*                 /UNQUOTE
+interp : INTERP (brace | dent)
 @group : paren | brace | brack
 paren  : /LPAREN (expres|@dent /feed) /RPAREN
 brace  : /LBRACE (expres|@dent /feed) /RBRACE

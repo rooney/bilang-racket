@@ -24,7 +24,9 @@
   (d-quote #\")
   (b-quote #\`)
   (prime? (:* s-quote))
-  (spacetabs (:+ (:or #\space #\tab))))
+  (space/tab (:or #\space #\tab))
+  (spacetabs (:+ space/tab))
+  (spacetabs? (:* space/tab)))
 
 (define main-lexer
   (lexer-srcloc
@@ -70,8 +72,8 @@
 
 (define-macro (strlexi (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(strlex (#\\ CUSTOM-CHARS ...)
-            ["\\{}" (token 'STRING "\\")]
-            [(:seq "\\{" (:? spacetabs)) (list (token 'INTERP 0) (token-LBRACE!))]
+            [(:seq "\\{" spacetabs? "}") (token 'STRING "\\")]
+            [(:seq "\\{" spacetabs?) (list (token 'INTERP 0) (token-LBRACE!))]
             CUSTOM-RULES ...))
 
 (define-macro (strlexe (CUSTOM-CHARS ...) CUSTOM-RULES ...)
@@ -82,10 +84,16 @@
              CUSTOM-RULES ...
              [(:seq #\\ any-char) (unknown-escape)]))
 
-(define-macro (blockstr STRLEX CUSTOM-RULES ...)
-  #'(STRLEX ()
+(define-macro (linestr STRLEX (CUSTOM-CHARS ...) CUSTOM-RULES ...)
+  #'(STRLEX (CUSTOM-CHARS ...)
+            [(:seq "\\{" nextloc) (unexpected-indent)]
+            CUSTOM-RULES ...))
+
+(define-macro (blockstr LET-BS STRLEX (CUSTOM-CHARS ...) CUSTOM-RULES ...)
+  #'(STRLEX (CUSTOM-CHARS ...)
             [(:seq "\\{" nextloc "}") (escape-newline)]
-            [(:seq "\\" nextloc) (str-interp)]
+            [(:seq "\\{" nextloc) (str-interp ((token-LBRACE!)) (indentation-error))]
+            [(:seq "\\" nextloc) (str-interp () (if LET-BS (rewind! #:until "\\") (unknown-escape)))]
             [nextloc (extract-whites!)]
             CUSTOM-RULES ...))
 
@@ -96,24 +104,24 @@
                                        (cap-level! 0))])))
 
 (define-macro d-str
-  #'(token-QUOTE! (strlexe (d-quote)
-                           [d-quote (token-UNQUOTE!)]
-                           [(:seq #\\ d-quote) (token 'STRING #\")]
-                           [newline-char (unterminated-string)]
-                           [(eof) (unterminated-string)])))
+  #'(token-QUOTE! (linestr strlexe (d-quote)
+                                   [d-quote (token-UNQUOTE!)]
+                                   [(:seq #\\ d-quote) (token 'STRING #\")]
+                                   [newline-char (unterminated-string)]
+                                   [(:seq #\\ nextloc) (unknown-escape)]
+                                   [(eof) (unterminated-string)])))
 
 (define-macro b-str
-  #'(token-QUOTE! (strlexi (#\( #\) #\{ #\} #\[ #\] #\,)
-                           [(:or #\) #\} #\] #\, newline-char) (rewind! (token-UNQUOTE!))]
-                           [#\( (push-mode-str! str-paren)]
-                           [#\{ (push-mode-str! str-brace)]
-                           [#\[ (push-mode-str! str-brack)]
-                           [(:seq #\\ nextloc) (if (>= _dent (measure-dent!))
-                                                   (rewind! #:to "\\")
-                                                   (unexpected-indent))]
-                           [(:seq "\\{" nextloc) (unexpected-indent)]
-                           [(eof) (cons (token-UNQUOTE!)
-                                        (cap-level! 0))])))
+  #'(token-QUOTE! (linestr strlexi (#\( #\) #\{ #\} #\[ #\] #\,)
+                                   [(:or #\) #\} #\] #\, newline-char) (rewind! (token-UNQUOTE!))]
+                                   [#\( (push-mode-str! str-paren)]
+                                   [#\{ (push-mode-str! str-brace)]
+                                   [#\[ (push-mode-str! str-brack)]
+                                   [(:seq #\\ nextloc) (if (>= _dent (measure-dent!))
+                                                           (rewind! #:until "\\")
+                                                           (unexpected-indent))]
+                                   [(eof) (cons (token-UNQUOTE!)
+                                                (cap-level! 0))])))
 
 (define-macro s-block
   #'(append (list (token-QUOTE! 'DEDENT<-UNQUOTE)
@@ -126,12 +134,12 @@
   #'(append (list (token-QUOTE! (lexer-srcloc [d-quote (token-UNQUOTE!)]
                                               [any-char (unterminated-string)]
                                               [(eof) (unterminated-string)]))
-                  (indent! (blockstr strlexe [(eof) (unterminated-string)])))
+                  (indent! (blockstr #f strlexe () [(eof) (unterminated-string)])))
             (-1LF (extract-whites!))))
 
 (define-macro b-block
   #'(append (list (token-QUOTE! 'DEDENT<-UNQUOTE)
-                  (indent! (blockstr strlexi [(eof) (cap-level! 0)])))
+                  (indent! (blockstr #t strlexi () [(eof) (cap-level! 0)])))
             (-1LF (extract-whites!))))
 
 (define-macro (push-mode-str! LEXER)
@@ -155,16 +163,16 @@
 (define str-brace (str-mode #\}))
 (define str-brack (str-mode #\]))
 
-(define-macro str-interp
+(define-macro (str-interp (EXTRA-TOKEN ...) NODENT)
   #'(let ([current-dent _dent]
           [next-dent (add1 _dent)]
           [new-dent (measure-dent!)])
       (cond
-        [(< new-dent next-dent) (rewind! #:to "\\")]
+        [(< new-dent next-dent) NODENT]
         [(= new-dent next-dent) (let ([token-INTERP (token 'INTERP (- current-dent _level))])
                                   (begin (push-mode! (jumpto _level))
-                                         (set! _level _dent)
-                                         (list token-INTERP (indent!))))]
+                                         (set! _level current-dent)
+                                         (list token-INTERP EXTRA-TOKEN ... (indent!))))]
         [(> new-dent next-dent) (indentation-error next-dent)])))
 
 (define-macro escape-newline
@@ -213,7 +221,7 @@
 
 (define-macro-cases rewind!
   [(rewind! TOKEN)        #'(rewind! (string-length lexeme) TOKEN)]
-  [(rewind! #:to STR)     #'(rewind! (- (string-length lexeme) (string-length STR)) (token 'STRING STR))]
+  [(rewind! #:until STR)  #'(rewind! (- (string-length lexeme) (string-length STR)) (token 'STRING STR))]
   [(rewind! LENGTH TOKEN) #'(begin (file-position input-port (- (file-position input-port) LENGTH)) TOKEN)])
 
 (define _mode main-lexer)
