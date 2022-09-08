@@ -1,6 +1,6 @@
 #lang brag
 expres : /feed? expre
-@expre : exprK /(SPACE|feed|excess)?
+@expre : exprK /(feed|void|SPACE)*
 @exprK : exprJ
 @exprJ : applyJ
        | expr1
@@ -8,8 +8,6 @@ expres : /feed? expre
        | expr0
 @expr0 : e0
        | dot
-       | param
-       | prod
        | group
        | applyG
        | apply0
@@ -23,29 +21,30 @@ apply0  : expr0 op
         | num id
 applyG  : (expr0|op) group
 
-@e0 : edot
+@e0 : e0dot
     | num
     | id
+    | string
 
-edot   : e0 dot
+func   : param+ brace
+e0dot  : e0 dot
 num    : INTEGER | DECIMAL
 int    : INTEGER
 id     : ID
 op     : OP
-kv0    : @nuke (expr0|op)
-kv1    : @nuke /SPACE expr1
-kv2    : @nuke dent
-nuke   : (NUKE /SPACE?)* NUKE
+kv0    : @arg (expr0|op)
+kv1    : @arg /SPACE expr1
+kv2    : @arg dent
+arg    : (ARG /SPACE?)* ARG
 param  : PARAM? PARAM
 dot    : /DOT (op|id)
-prod   : /PROTECTED (op|id)
-string : /QUOTE /INDENT (STRING|braces|interp|NEWLINE|/LBRACE /NEWLINE /RBRACE)* /DEDENT /UNQUOTE
-       | /QUOTE         (STRING|braces|interp)* /UNQUOTE
-interp : BQUOTE dent
-@group : parens | bracks | braces | interp | string
-parens : /LPAREN (expres|@dent /feed) /RPAREN
-bracks : /LBRACK (expres|@dent /feed) /RBRACK
-braces : /LBRACE (expres|@dent /feed) /RBRACE
+string : /QUOTE /INDENT (STRING|brace|interp|NEWLINE)* /DEDENT /UNQUOTE
+       | /QUOTE         (STRING|brace|interp)*                 /UNQUOTE
+interp : INTERP dent
+@group : paren | brace | brack
+paren  : /LPAREN (expres|@dent /feed) /RPAREN
+brace  : /LBRACE (expres|@dent /feed) /RBRACE
+brack  : /LBRACK (expres|@dent /feed) /RBRACK
 dent   : /INDENT expre /DEDENT
-excess : /INDENT excess? /DEDENT
+void   : /INDENT void? /DEDENT
 feed   : /NEWLINE+
