@@ -1,50 +1,80 @@
 #lang brag
 expres : /feed? expre
-@expre : exprK /(feed|void|SPACE)*
-@exprK : exprJ
-@exprJ : applyJ
+@expre : /SPACE? exprS /(SPACE|feed|edent)?
+@exprS : exprF
+@exprF : func
+       | applyF
+       | applyM
+       | applyK
+       | commaK
+       | exprK
+@exprK : comma
+       | comma0
+       | commaO
+       | commaQ
+       | comma1
        | expr1
 @expr1 : apply1
+       | exprQ
+@exprQ : applyQ
+       | param
+       | exprO
+@exprO : applyO
        | expr0
-@expr0 : e0
-       | dot
-       | group
+@expr0 : apply0
        | applyG
-       | apply0
+       | group
+       | dot
+       | e
 
-applyJ  : expr1 j+
-j       : /COMMA (expr0|dot+|dot* op) (/SPACE expr1)?
-apply1  : expr0 (/SPACE kv0)* /SPACE (kv0|expr1)
-apply0  : expr0 op
-        | (expr0|op) dot
-        | (group|op|applyG) e0
-        | num id
-applyG  : (expr0|op) group
+func   : /FUNC exprF
+applyF : (comma|comma0|commaO|commaG|commaQ|exprQ) /SPACE (applyF|func)
+applyK : (comma|comma0|commaO|commaG|commaQ|exprQ) /SPACE (applyK|kv1)
+       | (group|applyG) kv1
+applyM : exprK /SPACE op
+       | (exprK /SPACE)? op /SPACE exprF
+       | (exprK /SPACE)? op (/SPACE exprF)? dent
 
-@e0 : edot
-    | num
-    | id
-    | string
+@comma : exprK /COMMA
+commaK : comma kv1
+commaQ : comma (kv0|e)
+       | (comma|comma0|commaO|commaG|commaQ) /SPACE kv0
+comma1 : (comma|comma0|commaO|commaG|commaQ) /SPACE expr1
+comma0 : (comma|comma0|commaO) dot
+commaO : (comma|comma0) op
+commaG : (comma|comma0 op?) group
 
-edot   : e0 dot
-func   : param+ brace
+apply1 : exprQ /SPACE expr1
+applyQ : exprQ /SPACE kv0
+       | (group|applyG) kv0
+       | group e
+applyO : expr0 op
+apply0 : exprO dot
+       | op (e|dot)
+       | num id
+applyG : (exprO|param|op) group
+
+@e : num
+   | string
+   | id
+
 num    : INTEGER | DECIMAL
 int    : INTEGER
 id     : ID
 op     : OP
-kv0    : @arg (expr0|op)
-kv1    : @arg /SPACE expr1
-kv2    : @arg dent
-arg    : (ARG /SPACE?)* ARG
-param  : PARAM? PARAM
-dot    : /DOT (op|id)
+kv0    : @key (op|exprO)
+kv1    : @key /SPACE exprF
+kv2    : @key dent
+key    : KEY (/SPACE? KEY)*
+param  : PARAM PARAM?
+dot    : /DOT (op|id) BIND?
 string : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
        | /QUOTE         (STRING|interp)*                 /UNQUOTE
-interp : INTERP (brace | dent)
-@group : paren | brace | brack
-paren  : /LPAREN (expres|@dent /feed) /RPAREN
-brace  : /LBRACE (expres|@dent /feed) /RBRACE
-brack  : /LBRACK (expres|@dent /feed) /RBRACK
+interp : INTERP (curly | dent)
+@group : paren | curly | brakt
+paren  : /LPAREN (@expre|@dent /feed|op) /RPAREN
+curly  : /LCURLY (@expre|@dent /feed) /RCURLY
+brakt  : /LBRAKT (@expre?|@dent /feed) /RBRAKT
 dent   : /INDENT expre /DEDENT
-void   : /INDENT void? /DEDENT
+edent  : /INDENT edent? /DEDENT
 feed   : /NEWLINE+

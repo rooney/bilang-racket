@@ -13,13 +13,13 @@
               (:* (:seq (:or "-" "+" "/" "<-") (:+ alnum)))))
   (identifier (:seq name prime?))
   (name/op (:or name operator))
-  (key (:seq name/op (:* (:seq (:? #\.) name/op)) prime?))
-  (arg (:seq key #\:))
-  (param (:seq #\: (:? key)))
+  (keyname (:seq name/op (:* (:seq (:? #\.) name/op)) prime?))
+  (key (:seq keyname #\:))
+  (param (:seq #\: (:? keyname)))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
-  (operator (:+ (:or (char-set "+*/\\-~=><?!&|^#%$@") ".." "...")))
+  (operator (:seq (:+ (:or (char-set "+*/\\-~=><?!&|^#%$@") ".." "...")) prime?))
   (s-quote #\')
   (d-quote #\")
   (b-quote #\`)
@@ -38,25 +38,26 @@
                 [(= dent _level) (token-NEWLINE)]
                 [(< dent _level) (cap-level! dent)]))]
    [spacetabs (token 'SPACE lexeme)]
+   [identifier (token 'ID (string->symbol lexeme))]
+   [operator (token 'OP (string->symbol lexeme))]
    [decimal (token 'DECIMAL (string->number lexeme))]
    [integer (token 'INTEGER (string->number lexeme))]
+   [key (token 'KEY (string->symbol lexeme))]
+   [param (list (token 'FUNC ''FUNC)
+                (token 'PARAM (string->symbol lexeme)))]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
    [s-quote s-str]
    [d-quote d-str]
    [b-quote b-str]
-   [identifier (token 'ID (string->symbol lexeme))]
-   [operator (token 'OP (string->symbol lexeme))]
-   [param (token 'PARAM (string->symbol lexeme))]
-   [arg (token 'ARG (string->symbol lexeme))]
-   ["()" (token 'BIND (string->symbol lexeme))]
+   ["()" (token 'BIND ''BIND)]
    [#\( token-LPAREN]
    [#\) token-RPAREN]
-   [#\[ token-LBRACK]
-   [#\] token-RBRACK]
-   [#\{ (token-LBRACE!)]
-   [#\} (token-RBRACE!)]
+   [#\[ token-LBRAKT]
+   [#\] token-RBRAKT]
+   [#\{ (token-LCURLY!)]
+   [#\} (token-RCURLY!)]
    [#\. (token 'DOT (string->symbol lexeme))]
    [#\; (token 'SEMICOLON (string->symbol lexeme))]
    [#\, (token 'COMMA (string->symbol lexeme))]
@@ -73,7 +74,7 @@
 (define-macro (strlexi (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(strlex (#\\ CUSTOM-CHARS ...)
             [(:seq "\\{" spacetabs? "}") (token 'STRING "\\")]
-            [(:seq "\\{" spacetabs?) (list (token 'INTERP 0) (token-LBRACE!))]
+            [(:seq "\\{" spacetabs?) (list (token 'INTERP 0) (token-LCURLY!))]
             CUSTOM-RULES ...))
 
 (define-macro (strlexe (CUSTOM-CHARS ...) CUSTOM-RULES ...)
@@ -92,7 +93,7 @@
 (define-macro (blockstr LET-BS STRLEX (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(STRLEX (CUSTOM-CHARS ...)
             [(:seq "\\{" nextloc "}") (escape-newline)]
-            [(:seq "\\{" nextloc) (str-interp ((token-LBRACE!)) (indentation-error))]
+            [(:seq "\\{" nextloc) (str-interp ((token-LCURLY!)) (indentation-error))]
             [(:seq "\\" nextloc) (str-interp () (if LET-BS (rewind! #:until "\\") (unknown-escape)))]
             [nextloc (extract-whites!)]
             CUSTOM-RULES ...))
@@ -115,8 +116,8 @@
   #'(token-QUOTE! (linestr strlexi (#\( #\) #\{ #\} #\[ #\] #\,)
                                    [(:or #\) #\} #\] #\, newline-char) (rewind! (token-UNQUOTE!))]
                                    [#\( (push-mode-str! str-paren)]
-                                   [#\{ (push-mode-str! str-brace)]
-                                   [#\[ (push-mode-str! str-brack)]
+                                   [#\{ (push-mode-str! str-curly)]
+                                   [#\[ (push-mode-str! str-brakt)]
                                    [(:seq #\\ nextloc) (if (>= _dent (measure-dent!))
                                                            (rewind! #:until "\\")
                                                            (unexpected-indent))]
@@ -153,15 +154,15 @@
 (define-macro (str-mode TERMINATOR)
   #'(strlexi (#\( #\) #\{ #\} #\[ #\])
              [#\( (push-mode-str! str-paren)]
-             [#\{ (push-mode-str! str-brace)]
-             [#\[ (push-mode-str! str-brack)]
+             [#\{ (push-mode-str! str-curly)]
+             [#\[ (push-mode-str! str-brakt)]
              [TERMINATOR (pop-mode-str!)]
              [(:or #\) #\} #\]) (rr-error "Mismatched bracket")]
              [(eof) (rr-error "Missing closing bracket")]))
 
 (define str-paren (str-mode #\)))
-(define str-brace (str-mode #\}))
-(define str-brack (str-mode #\]))
+(define str-curly (str-mode #\}))
+(define str-brakt (str-mode #\]))
 
 (define-macro (str-interp (EXTRA-TOKEN ...) NODENT)
   #'(let ([current-dent _dent]
@@ -298,19 +299,19 @@
 (define token-RPAREN
   (token 'RPAREN ")"))
 
-(define token-LBRACK
-  (token 'LBRACK "["))
+(define token-LBRAKT
+  (token 'LBRAKT "["))
 
-(define token-RBRACK
-  (token 'RBRACK "]"))
+(define token-RBRAKT
+  (token 'RBRAKT "]"))
 
-(define (token-LBRACE! [lexer main-lexer])
+(define (token-LCURLY! [lexer main-lexer])
   (push-mode! lexer)
-  (token 'LBRACE "{"))
+  (token 'LCURLY "{"))
 
-(define-macro token-RBRACE!
+(define-macro token-RCURLY!
   #'(cond [(empty? _modestack) (rr-error "No matching pair")]
-          [else (pop-mode!) (token 'RBRACE "}")]))
+          [else (pop-mode!) (token 'RCURLY "}")]))
 
 (define (token-QUOTE! lexer)
   (push-mode! lexer)
