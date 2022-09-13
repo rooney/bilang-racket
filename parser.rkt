@@ -1,7 +1,10 @@
 #lang brag
-expres : /feed? expre
-@expre : /SPACE? exprS /(SPACE|feed|edent)?
-@exprS : exprF
+expres : /feed? exprE
+@exprE : /SPACE? expr3 /(SPACE|feed|edent)?
+@expr3 : apply3
+       | expr2
+@expr2 : apply2
+       | exprF
 @exprF : func
        | applyF
        | applyM
@@ -27,7 +30,10 @@ expres : /feed? expre
        | dot
        | e
 
-func   : /FUNC exprF
+apply3 : expr2 /NEWLINE expr3
+apply2 : (comma|comma0|commaO|commaG|commaQ|exprQ) (/SPACE apply2|dent)
+
+func   : /FUNC expr2
 applyF : (comma|comma0|commaO|commaG|commaQ|exprQ) /SPACE (applyF|func)
 applyK : (comma|comma0|commaO|commaG|commaQ|exprQ) /SPACE (applyK|kv1)
        | (group|applyG) kv1
@@ -44,27 +50,27 @@ comma0 : (comma|comma0|commaO) dot
 commaO : (comma|comma0) op
 commaG : (comma|comma0 op?) group
 
-apply1 : exprQ /SPACE expr1
+apply1 : exprQ /SPACE (expr1|kv2)
 applyQ : exprQ /SPACE kv0
        | (group|applyG) kv0
        | group e
 applyO : expr0 op
 apply0 : exprO dot
        | op (e|dot)
-       | num id
+       | int id
 applyG : (exprO|param|op) group
 
-@e : num
+@e : id
    | string
-   | id
+   | num
 
 num    : INTEGER | DECIMAL
 int    : INTEGER
-id     : ID
 op     : OP
-kv0    : @key (op|exprO)
-kv1    : @key /SPACE exprF
-kv2    : @key dent
+@id    : ID
+@kv0   : @key (op|exprO)
+@kv1   : @key /SPACE expr2
+@kv2   : @key dent
 key    : KEY (/SPACE? KEY)*
 param  : PARAM PARAM?
 dot    : /DOT (op|id) BIND?
@@ -72,9 +78,9 @@ string : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
        | /QUOTE         (STRING|interp)*                 /UNQUOTE
 interp : INTERP (curly | dent)
 @group : paren | curly | brakt
-paren  : /LPAREN (@expre|@dent /feed|op) /RPAREN
-curly  : /LCURLY (@expre|@dent /feed) /RCURLY
-brakt  : /LBRAKT (@expre?|@dent /feed) /RBRAKT
-dent   : /INDENT expre /DEDENT
+paren  : /LPAREN (@exprE|@dent /feed|op) /RPAREN
+curly  : /LCURLY (@exprE|@dent /feed) /RCURLY
+brakt  : /LBRAKT (@exprE?|@dent /feed) /RBRAKT
+dent   : /INDENT exprE /DEDENT
 edent  : /INDENT edent? /DEDENT
 feed   : /NEWLINE+
