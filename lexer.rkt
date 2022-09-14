@@ -43,7 +43,7 @@
    [decimal (token 'DECIMAL (string->number lexeme))]
    [integer (token 'INTEGER (string->number lexeme))]
    [key (token 'KEY (string->symbol lexeme))]
-   [param (list (token 'FUNC ''FUNC)
+   [param (list (token 'FUNCTION ''FUNCTION)
                 (token 'PARAM (string->symbol lexeme)))]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
@@ -54,8 +54,8 @@
    ["()" (token 'BIND ''BIND)]
    [#\( token-LPAREN]
    [#\) token-RPAREN]
-   [#\[ token-LBRAKT]
-   [#\] token-RBRAKT]
+   [#\[ token-LSQUARE]
+   [#\] token-RSQUARE]
    [#\{ (token-LCURLY!)]
    [#\} (token-RCURLY!)]
    [#\. (token 'DOT (string->symbol lexeme))]
@@ -74,7 +74,7 @@
 (define-macro (strlexi (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(strlex (#\\ CUSTOM-CHARS ...)
             [(:seq "\\{" spacetabs? "}") (token 'STRING "\\")]
-            [(:seq "\\{" spacetabs?) (list (token 'INTERP 0) (token-LCURLY!))]
+            [(:seq "\\{" spacetabs?) (list (token 'INTERPOLATE 0) (token-LCURLY!))]
             CUSTOM-RULES ...))
 
 (define-macro (strlexe (CUSTOM-CHARS ...) CUSTOM-RULES ...)
@@ -93,8 +93,8 @@
 (define-macro (blockstr LET-BS STRLEX (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(STRLEX (CUSTOM-CHARS ...)
             [(:seq "\\{" nextloc "}") (escape-newline)]
-            [(:seq "\\{" nextloc) (str-interp ((token-LCURLY!)) (indentation-error))]
-            [(:seq "\\" nextloc) (str-interp () (if LET-BS (rewind! #:until "\\") (unknown-escape)))]
+            [(:seq "\\{" nextloc) (str-interpolate ((token-LCURLY!)) (indentation-error))]
+            [(:seq "\\" nextloc) (str-interpolate () (if LET-BS (rewind! #:until "\\") (unknown-escape)))]
             [nextloc (extract-whites!)]
             CUSTOM-RULES ...))
 
@@ -117,7 +117,7 @@
                                    [(:or #\) #\} #\] #\, newline-char) (rewind! (token-UNQUOTE!))]
                                    [#\( (push-mode-str! str-paren)]
                                    [#\{ (push-mode-str! str-curly)]
-                                   [#\[ (push-mode-str! str-brakt)]
+                                   [#\[ (push-mode-str! str-square)]
                                    [(:seq #\\ nextloc) (if (>= _dent (measure-dent!))
                                                            (rewind! #:until "\\")
                                                            (unexpected-indent))]
@@ -155,25 +155,25 @@
   #'(strlexi (#\( #\) #\{ #\} #\[ #\])
              [#\( (push-mode-str! str-paren)]
              [#\{ (push-mode-str! str-curly)]
-             [#\[ (push-mode-str! str-brakt)]
+             [#\[ (push-mode-str! str-square)]
              [TERMINATOR (pop-mode-str!)]
              [(:or #\) #\} #\]) (rr-error "Mismatched bracket")]
              [(eof) (rr-error "Missing closing bracket")]))
 
 (define str-paren (str-mode #\)))
 (define str-curly (str-mode #\}))
-(define str-brakt (str-mode #\]))
+(define str-square (str-mode #\]))
 
-(define-macro (str-interp (EXTRA-TOKEN ...) NODENT)
+(define-macro (str-interpolate (EXTRA-TOKEN ...) NODENT)
   #'(let ([current-dent _dent]
           [next-dent (add1 _dent)]
           [new-dent (measure-dent!)])
       (cond
         [(< new-dent next-dent) NODENT]
-        [(= new-dent next-dent) (let ([token-INTERP (token 'INTERP (- current-dent _level))])
+        [(= new-dent next-dent) (let ([token-INTERPOLATE (token 'INTERPOLATE (- current-dent _level))])
                                   (begin (push-mode! (jumpto _level))
                                          (set! _level current-dent)
-                                         (list token-INTERP EXTRA-TOKEN ... (indent!))))]
+                                         (list token-INTERPOLATE EXTRA-TOKEN ... (indent!))))]
         [(> new-dent next-dent) (indentation-error next-dent)])))
 
 (define-macro escape-newline
@@ -299,11 +299,11 @@
 (define token-RPAREN
   (token 'RPAREN ")"))
 
-(define token-LBRAKT
-  (token 'LBRAKT "["))
+(define token-LSQUARE
+  (token 'LSQUARE "["))
 
-(define token-RBRAKT
-  (token 'RBRAKT "]"))
+(define token-RSQUARE
+  (token 'RSQUARE "]"))
 
 (define (token-LCURLY! [lexer main-lexer])
   (push-mode! lexer)
