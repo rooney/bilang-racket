@@ -3,6 +3,7 @@
 expres : /NEWLINE* expr4
 @expr4 : /SPACE? expr3 /(SPACE|NEWLINE|pseudent)*
 @expr3 : apply3
+       | macro3|macro2|macro1
        | exprZ
 @exprZ : applyZ
        | exprS
@@ -10,12 +11,10 @@ expres : /NEWLINE* expr4
        | split|split0|splitO|splitB|splitQ|splitI
        | expr2
 @expr2 : apply2
-       | exprM
-@exprM : applyM
-       | exprF
-@exprF : func
+       | exprP
+@exprP : applyP
        | applyF
-       | applyP
+       | func
        | exprC
 @exprC : comma|comma0|commaO|commaB|commaQ|comma1
        | coming
@@ -34,13 +33,12 @@ expres : /NEWLINE* expr4
        | e
 
 apply3 : exprZ /NEWLINE expr3
-applyZ : exprZ /NEWLINE (kv0|kv3)
+applyZ : (exprZ|macro2|macro1) /NEWLINE (kv0|kvS)
 
 macro  : @op (/SPACE kv0)*
-
-applyM : ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro  /SPACE kv1     dent?
-       | ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro (/SPACE exprM)? dent
-       | ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro  /SPACE exprM
+macro3 : ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro (/SPACE (exprP|macro1|kv1))? dent?  /NEWLINE expr3
+macro2 : ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro (/SPACE (exprP|macro1|kv1))? dent                 
+macro1 : ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro  /SPACE (exprP|macro1|kv1)
        |  (split|split0|splitO|splitB|splitQ|exprC)  /SPACE   macro
 applyS :  (split|split0|splitO|splitB|splitQ)       (/SPACE (apply2|applyS)|dent)
 apply2 :  (comma|comma0|commaO|commaB|commaQ|exprQ) (/SPACE  apply2        |dent)
@@ -48,14 +46,14 @@ applyF :  (comma|comma0|commaO|commaB|commaQ|exprQ)  /SPACE (applyF|func)
 applyP :  (comma|comma0|commaO|commaB|commaQ|exprQ)  /SPACE (applyP|kv2)
        |  (comma|applyB|bracket) kv2
 
-func   : /FUNCTION expr2
+func   : /FUNCTION (expr2|macro2|macro1)
 coming : /COMING
 @comma : exprC /COMMA
-@split : exprS /SPACE /COMMA
-       | exprZ /NEWLINE /COMMA
+@split : (exprS|macro1) /SPACE /COMMA
+       | (exprZ|macro2|macro1) /NEWLINE /COMMA
 
-splitI : (split|split0|splitO|splitB|splitQ) /SPACE (exprF|kv2) 
-       |  split kv2
+splitI : (split|split0|splitO|splitB|splitQ) /SPACE (exprP|kv2) 
+       |  split  kv2
 splitQ :  split (kv0|e)
        | (split|split0|splitO|splitB|splitQ) /SPACE kv0
 split0 : (split|split0|splitO) dot
@@ -89,9 +87,10 @@ int    : INTEGER
 op     : OP
 @id    : ID
 @kv0   : key (exprO|op|dent)
-@kv1   : key /SPACE exprM
-@kv2   : key /SPACE expr2
-@kv3   : key /SPACE exprS
+@kv1   : key /SPACE (exprP|macro1)
+@kv2   : key /SPACE (expr2|macro2|macro1)
+@kvS   : key /SPACE (exprS|macro2|macro1)
+@kv3   : key /NEWLINE expr3
 key    : KEY (/SPACE? KEY)*
 param  : PARAM PARAM?
 dot    : /DOT (op|id) BIND?
