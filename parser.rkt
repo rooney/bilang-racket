@@ -11,7 +11,7 @@ expres : /NEWLINE* expr4
        | expr2
 @expr2 : apply2
        | exprM
-@exprM : macro
+@exprM : applyM
        | exprF
 @exprF : func
        | applyF
@@ -33,11 +33,14 @@ expres : /NEWLINE* expr4
        | e
 
 apply3 : exprZ /NEWLINE expr3
-applyZ : exprZ /NEWLINE (kv0|kv5)
+applyZ : exprZ /NEWLINE (kv0|kv3)
 
-macro  : ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? op (/SPACE exprM)? dent
-       | ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? op  /SPACE exprM
-       |  (split|split0|splitO|splitB|splitQ|exprC)  /SPACE   op
+macro  : @op (/SPACE kv0)*
+
+applyM : ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro  /SPACE kv1     dent?
+       | ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro (/SPACE exprM)? dent
+       | ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro  /SPACE exprM
+       |  (split|split0|splitO|splitB|splitQ|exprC)  /SPACE   macro
 applyS :  (split|split0|splitO|splitB|splitQ)       (/SPACE (apply2|applyS)|dent)
 apply2 :  (comma|comma0|commaO|commaB|commaQ|exprQ) (/SPACE  apply2        |dent)
 applyF :  (comma|comma0|commaO|commaB|commaQ|exprQ)  /SPACE (applyF|func)
@@ -84,8 +87,9 @@ int    : INTEGER
 op     : OP
 @id    : ID
 @kv0   : key (exprO|op|dent)
+@kv1   : key /SPACE exprM
 @kv2   : key /SPACE expr2
-@kv5   : key /SPACE exprS
+@kv3   : key /SPACE exprS
 key    : KEY (/SPACE? KEY)*
 param  : PARAM PARAM?
 dot    : /DOT (op|id) BIND?
