@@ -18,6 +18,7 @@ expres : /NEWLINE* expr4
        | applyP
        | exprC
 @exprC : comma|comma0|commaO|commaB|commaQ|comma1
+       | coming
        | expr1
 @expr1 : apply1
        | exprQ
@@ -48,6 +49,7 @@ applyP :  (comma|comma0|commaO|commaB|commaQ|exprQ)  /SPACE (applyP|kv2)
        |  (comma|applyB|bracket) kv2
 
 func   : /FUNCTION expr2
+coming : /COMING
 @comma : exprC /COMMA
 @split : exprS /SPACE /COMMA
        | exprZ /NEWLINE /COMMA

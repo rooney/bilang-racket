@@ -51,6 +51,7 @@
    [s-quote s-str]
    [d-quote d-str]
    [b-quote b-str]
+   ["{," (list (token-LCURLY!) (token 'COMING ''COMING))]
    ["()" (token 'BIND ''BIND)]
    [#\( token-LPAREN]
    [#\) token-RPAREN]
@@ -61,7 +62,7 @@
    [#\. (token 'DOT (string->symbol lexeme))]
    [#\; (token 'SEMICOLON (string->symbol lexeme))]
    [#\, (token 'COMMA (string->symbol lexeme))]
-   [(:+ #\,) (rr-error (string-append "Unexpected " lexeme))]
+   [(:seq (:? "{") "," spacetabs? ",") (rr-error (string-append "Unexpected " lexeme))]
    [(eof) (if (> _level 0)
               (cap-level! 0) 
               (void))]))
