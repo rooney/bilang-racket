@@ -1,105 +1,117 @@
 #lang brag
 
-expres : /NEWLINE* expr4
-@expr4 : /SPACE? expr3 /(SPACE|NEWLINE|pseudent)*
+expres : /feeds expr4
+@expr4 : /SPACE? exprE /(SPACE|feeds|pseudent)*
+@exprE : applyE|commaE|whiscE|macroE
+       | applyF|macro3
+       | expr3
 @expr3 : apply3
-       | macro3|macro2|macro1
        | exprZ
-@exprZ : applyZ
-       | exprS
-@exprS : applyS
-       | split|split0|splitO|splitB|splitQ|splitI
+@exprZ : macro2|macro1
        | expr2
-@expr2 : apply2
-       | exprP
-@exprP : applyP
-       | applyF
-       | func
-       | exprC
-@exprC : comma|comma0|commaO|commaB|commaQ|comma1
-       | coming
+@expr2 : apply2|applyD
+       | comma2|commaD
+       | whisc2|whiscD|whiscI
+       | exprH
+@exprH : whisc1|whisc0|whiscO|whiscQ
+       | exprI
+@exprI : applyI|commaI
+       | comma1|comma0|commaO|commaQ
        | expr1
 @expr1 : apply1
        | exprQ
 @exprQ : applyQ
-       | param
        | exprO
 @exprO : applyO
+       | obtain
        | expr0
 @expr0 : apply0
        | applyB
        | bracket
        | dot
+       | solo
        | e
 
-apply3 : exprZ /NEWLINE expr3
-applyZ : (exprZ|macro2|macro1) /NEWLINE (kv0|kvS)
+applyF : (expr2|apply3) /feeds exprE
+       | expr3 /FEED kvE
+apply3 : expr3 /FEED (kvZ|kv0|kvD)
 
 macro  : @op (/SPACE kv0)*
-macro3 : ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro (/SPACE (exprP|macro1|kv1))? dent?  /NEWLINE expr3
-macro2 : ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro (/SPACE (exprP|macro1|kv1))? dent                 
-macro1 : ((split|split0|splitO|splitB|splitQ|exprC)  /SPACE)? macro  /SPACE (exprP|macro1|kv1)
-       |  (split|split0|splitO|splitB|splitQ|exprC)  /SPACE   macro
-applyS :  (split|split0|splitO|splitB|splitQ)       (/SPACE (apply2|applyS)|dent)
-apply2 :  (comma|comma0|commaO|commaB|commaQ|exprQ) (/SPACE  apply2        |dent)
-applyF :  (comma|comma0|commaO|commaB|commaQ|exprQ)  /SPACE (applyF|func)
-applyP :  (comma|comma0|commaO|commaB|commaQ|exprQ)  /SPACE (applyP|kv2)
-       |  (comma|applyB|bracket) kv2
+@mL    : (exprH|whisc|comma) /SPACE
+@mR    : (exprI|kv1|macro1)
 
-func   : /FUNCTION (expr2|macro2|macro1)
-coming : /COMING
-@comma : exprC /COMMA
-@split : (exprS|macro1) /SPACE /COMMA
-       | (exprZ|macro2|macro1) /NEWLINE /COMMA
+macroE : mL? macro /SPACE                         (applyE|commaE|kvE)
+macro3 : mL? macro /SPACE (mR COMMA dent|mR? dent?|applyD|commaD|kvD) /FEED exprE
+macro2 : mL? macro /SPACE (mR COMMA dent|mR? dent |applyD|commaD|kvD)
+macro1 : mL? macro /SPACE mR
+       | mL  macro
 
-splitI : (split|split0|splitO|splitB|splitQ) /SPACE (exprP|kv2) 
-       |  split  kv2
-splitQ :  split (kv0|e)
-       | (split|split0|splitO|splitB|splitQ) /SPACE kv0
-split0 : (split|split0|splitO) dot
-splitO : (split|split0) op
-splitB : (split|split0 op?) bracket
+@comma : (comma0|commaQ|comma1|applyQ|apply1)                              /COMMA
+@specc : (whiscI|commaI|applyI|whiscQ|whiscO|whisc0|whisc1|macro1) /SPACE /COMMA
+@blocc : (apply3|apply2|applyD|comma2|commaD|whisc2|whiscD|macro2) /FEED /COMMA
+@whisc :  specc|                                            expr3 /FEED /COMMA
+whisc2 : (specc|blocc)                                                   dent
+       | (      whisc0|whiscO|whiscQ)(/SPACE       (kv2|apply2|comma2) | dent)
+       | (whisc                     ) /SPACE       (kv2|apply2|comma2) | whisc kv2
+whiscD : (whisc|whisc0|whiscO|whiscQ) /SPACE       (kvD|applyD|commaD) | whisc kvD
+whiscE : (whisc|whisc0|whiscO|whiscQ) /SPACE       (kvE|applyE|commaE) | whisc kvE
+whiscI : (whisc|whisc0|whiscO|whiscQ) /SPACE       (kv1|applyI|commaI) | whisc kv1
+whisc1 : (whisc|whisc0|whiscO|whiscQ) /SPACE        exprI
+whiscQ : (whisc|whisc0|whiscO|whiscQ) /SPACE        kv0                | whisc kv0
+whiscO : (whisc|whisc0              )               op
+       | (             whiscO       ) /SPACE /COMMA op
+whisc0 : (whisc|whisc0|whiscO       )               dot
+       | (whisc|whisc0|whiscO       )               bracket
+comma2 : (comma|comma0|commaO|commaQ)(/SPACE       (kv2|apply2)|dent) | comma kv2
+commaD : (comma|comma0|commaO|commaQ) /SPACE       (kvD|applyD)       | comma kvD
+commaE : (comma|comma0|commaO|commaQ) /SPACE       (kvE|applyE)       | comma kvE
+commaI : (comma|comma0|commaO|commaQ) /SPACE       (kv1|applyI)       | comma kv1
+comma1 : (comma|comma0|commaO|commaQ) /SPACE        expr1
+commaQ : (comma|comma0|commaO|commaQ) /SPACE        kv0               | comma kv0
+commaO : (comma|comma0              )               op
+       | (             commaO|applyO)        /COMMA op
+comma0 : (comma|comma0|commaO       )               dot
+       | (      comma0|commaO       )               bracket
 
-comma1 : (comma|comma0|commaO|commaB|commaQ) /SPACE expr1
-commaQ :  comma (kv0|e)
-       | (comma|comma0|commaO|commaB|commaQ) /SPACE kv0
-comma0 : (comma|comma0|commaO) dot
-commaO : (comma|comma0) op
-commaB : (comma|comma0 op?) bracket
-
-apply1 : exprQ /SPACE expr1
-applyQ : exprQ /SPACE kv0
-       | (applyB|bracket) kv0
-       | bracket e
-
-applyB : (exprO|op|param) bracket
-applyO : expr0 op
+apply2 : exprQ (/SPACE (apply2|kv2)|dent) | (applyB|bracket) kv2
+applyD : exprQ  /SPACE (applyD|kvD)       | (applyB|bracket) kvD
+applyE : exprQ  /SPACE (applyE|kvE)       | (applyB|bracket) kvE
+applyI : exprQ  /SPACE (applyI|kv1)       | (applyB|bracket) kv1
+apply1 : exprQ  /SPACE expr1
+applyQ : exprQ  /SPACE kv0 | bracket e | (applyB|bracket) kv0
+applyO : expr0  op
+applyB : (exprO|op) bracket
 apply0 : exprO dot
        | op (e|dot)
-       | int id
+       | (id|nid) (id|nid)
 
-@e : id
-   | string
+@e : string
+   | id
+   | nid
    | num
 
 num    : INTEGER | DECIMAL
 int    : INTEGER
-op     : OP
+nid    : INTEGER ID
 @id    : ID
-@kv0   : key (exprO|op|dent)
-@kv1   : key /SPACE (exprP|macro1)
-@kv2   : key /SPACE (expr2|macro2|macro1)
-@kvS   : key /SPACE (exprS|macro2|macro1)
-@kv3   : key /NEWLINE expr3
-key    : KEY (/SPACE? KEY)*
-param  : PARAM PARAM?
+@kv0   : key (exprO|op)
+@kv1   : key /SPACE (macro1|exprI)
+@kv2   : key /SPACE (macro2|comma2|apply2)
+@kvZ   : key /SPACE exprZ
+@kvE   : key /feeds exprE
+@kvD   : key dent
+key    : KEYWORD (/SPACE? KEYWORD)*
+op     : OP
+feeds  : FEED | BLANKLINE
+obtain : PARAM PARAM?
+solo   : /SOLO
 dot    : /DOT (op|id) BIND?
-string : /QUOTE /INDENT (STRING|interpol|NEWLINE)* /DEDENT /UNQUOTE
-       | /QUOTE         (STRING|interpol)*                 /UNQUOTE
+string : /QUOTE /INDENT (STRING|interpol|FEED)* /DEDENT /UNQUOTE
+       | /QUOTE         (STRING|interpol)*              /UNQUOTE
 interpol : INTERPOLATE (curly|dent)
 @bracket : paren | curly | square
-paren    : /LPAREN (expr4|@dent /NEWLINE+|op) /RPAREN
-curly    : /LCURLY (expr4|@dent /NEWLINE+) /RCURLY
-square   : /LSQUARE (expr4?|@dent /NEWLINE+) /RSQUARE
+paren    : /LPAREN (expr4|@dent /feeds|op) /RPAREN
+curly    : /LCURLY (expr4|@dent /feeds) /RCURLY
+square   : /LSQUARE (expr4?|@dent /feeds) /RSQUARE
 dent     : /INDENT expr4 /DEDENT
 pseudent : /INDENT pseudent? /DEDENT

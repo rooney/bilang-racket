@@ -10,11 +10,11 @@
   (alnum (:/ #\a #\z #\A #\Z #\0 #\9))
   (name (:seq alpha
               (:* alnum)
-              (:* (:seq (:or "-" "+" "/" "<-") (:+ alnum)))))
+              (:* (:seq (:or "-" "+" "/" "<-" "->") (:+ alnum)))))
   (identifier (:seq name prime?))
   (name/op (:or name operator))
   (keyname (:seq name/op (:* (:seq (:? #\.) name/op)) prime?))
-  (key (:seq keyname #\:))
+  (keyword (:seq keyname #\:))
   (param (:seq #\: (:? keyname)))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
@@ -35,23 +35,23 @@
               (cond
                 [(> dent next-level) (indentation-error next-level)]
                 [(= dent next-level) (indent!)]
-                [(= dent _level) (token-NEWLINE)]
+                [(= dent _level) (if (> (line-diff) 1) (token 'BLANKLINE lexeme) (token-FEED))]
                 [(< dent _level) (cap-level! dent)]))]
    [spacetabs (token 'SPACE lexeme)]
    [identifier (token 'ID (string->symbol lexeme))]
    [operator (token 'OP (string->symbol lexeme))]
    [decimal (token 'DECIMAL (string->number lexeme))]
    [integer (token 'INTEGER (string->number lexeme))]
-   [key (token 'KEY (string->symbol lexeme))]
-   [param (list (token 'FUNCTION ''FUNCTION)
-                (token 'PARAM (string->symbol lexeme)))]
+   [keyword (token 'KEYWORD (string->symbol lexeme))]
+   [param (token 'PARAM (string->symbol lexeme))]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
    [s-quote s-str]
    [d-quote d-str]
    [b-quote b-str]
-   ["{," (list (token-LCURLY!) (token 'COMING ''COMING))]
+   [",," (rr-error (string-append "Unexpected " lexeme))]
+   ["{," (list (token-LCURLY!) (token 'SOLO ''SOLO))]
    ["()" (token 'BIND ''BIND)]
    [#\( token-LPAREN]
    [#\) token-RPAREN]
@@ -62,7 +62,6 @@
    [#\. (token 'DOT (string->symbol lexeme))]
    [#\; (token 'SEMICOLON (string->symbol lexeme))]
    [#\, (token 'COMMA (string->symbol lexeme))]
-   [(:seq (:? "{") "," spacetabs? ",") (rr-error (string-append "Unexpected " lexeme))]
    [(eof) (if (> _level 0)
               (cap-level! 0) 
               (void))]))
@@ -226,6 +225,9 @@
   [(rewind! #:until STR)  #'(rewind! (- (string-length lexeme) (string-length STR)) (token 'STRING STR))]
   [(rewind! LENGTH TOKEN) #'(begin (file-position input-port (- (file-position input-port) LENGTH)) TOKEN)])
 
+(define-macro line-diff
+  #'(- (position-line end-pos) (position-line start-pos)))
+
 (define _mode main-lexer)
 (define _modestack '())
 
@@ -251,9 +253,9 @@
                      (set! dedents (append dedents (dedent!))))]
            [num-feed (if (empty? dedents) numLF (sub1 numLF))])
       (append (concat-if (> num-feed 0)
-                         (make-list num-feed (token-NEWLINE)))
+                         (make-list num-feed (token-FEED)))
               dedents
-              (append-if (equal? _mode main-lexer) (token-NEWLINE))
+              (append-if (equal? _mode main-lexer) (token-FEED))
               (append-if (and (> _level 0)
                               (> _dent _level))
                          (token-STRING (- _dent _level) #\tab)))))
@@ -272,14 +274,14 @@
   (pop-mode!)
   (append (list (token 'DEDENT _mode))
           (concat-if (equal? _mode 'DEDENT<-UNQUOTE) (list (token-UNQUOTE!)
-                                                           (token-NEWLINE)))))
+                                                           (token-FEED)))))
 
 (define-macro extract-whites!
   #'(cap-level! (min _level (measure-dent!))))
 
 (define-macro -1LF
   #'(let ([whites extract-whites!])
-      (if (equal? 'NEWLINE (token-struct-type (car whites)))
+      (if (equal? 'FEED (token-struct-type (car whites)))
           (cdr whites) whites)))
 
 (define-macro numLF
@@ -288,8 +290,8 @@
 
 (define pending-tokens '())
 
-(define (token-NEWLINE)
-  (token 'NEWLINE "\n"))
+(define (token-FEED)
+  (token 'FEED "\n"))
 
 (define (token-STRING count char)
   (token 'STRING (make-string count char)))
