@@ -1,5 +1,6 @@
 #lang br
 (require brag/support syntax/readerr)
+(require racket/trace)
 
 (define-lex-abbrevs
   (digits (:+ (:/ #\0 #\9)))
@@ -53,10 +54,10 @@
    [",," (rr-error (string-append "Unexpected " lexeme))]
    ["{," (list (token-LCURLY!) (token 'SOLO ''SOLO))]
    ["()" (token 'BIND ''BIND)]
-   [#\( token-LPAREN]
-   [#\) token-RPAREN]
-   [#\[ token-LSQUARE]
-   [#\] token-RSQUARE]
+   [#\( (token-LPAREN!)]
+   [#\) (token-RPAREN!)]
+   [#\[ (token-LSQUARE!)]
+   [#\] (token-RSQUARE!)]
    [#\{ (token-LCURLY!)]
    [#\} (token-RCURLY!)]
    [#\. (token 'DOT (string->symbol lexeme))]
@@ -106,23 +107,23 @@
 
 (define-macro d-str
   #'(token-QUOTE! (linestr strlexe (d-quote)
-                                   [d-quote (token-UNQUOTE!)]
-                                   [(:seq #\\ d-quote) (token 'STRING #\")]
-                                   [newline-char (unterminated-string)]
-                                   [(:seq #\\ nextloc) (unknown-escape)]
-                                   [(eof) (unterminated-string)])))
+                           [d-quote (token-UNQUOTE!)]
+                           [(:seq #\\ d-quote) (token 'STRING #\")]
+                           [newline-char (unterminated-string)]
+                           [(:seq #\\ nextloc) (unknown-escape)]
+                           [(eof) (unterminated-string)])))
 
 (define-macro b-str
   #'(token-QUOTE! (linestr strlexi (#\( #\) #\{ #\} #\[ #\] #\,)
-                                   [(:or #\) #\} #\] #\, newline-char) (rewind! (token-UNQUOTE!))]
-                                   [#\( (push-mode-str! str-paren)]
-                                   [#\{ (push-mode-str! str-curly)]
-                                   [#\[ (push-mode-str! str-square)]
-                                   [(:seq #\\ nextloc) (if (>= _dent (measure-dent!))
-                                                           (rewind! #:until "\\")
-                                                           (unexpected-indent))]
-                                   [(eof) (cons (token-UNQUOTE!)
-                                                (cap-level! 0))])))
+                           [(:or #\) #\} #\] #\, newline-char) (rewind! (token-UNQUOTE!))]
+                           [#\( (push-mode-str! str-paren)]
+                           [#\{ (push-mode-str! str-curly)]
+                           [#\[ (push-mode-str! str-square)]
+                           [(:seq #\\ nextloc) (if (>= _dent (measure-dent!))
+                                                   (rewind! #:until "\\")
+                                                   (unexpected-indent))]
+                           [(eof) (cons (token-UNQUOTE!)
+                                        (cap-level! 0))])))
 
 (define-macro s-block
   #'(append (list (token-QUOTE! 'DEDENT<-UNQUOTE)
@@ -228,8 +229,10 @@
 (define-macro line-diff
   #'(- (position-line end-pos) (position-line start-pos)))
 
+(define _pending-tokens (list))
+(define _indents (list))
+(define _modestack (list))
 (define _mode main-lexer)
-(define _modestack '())
 
 (define (push-mode! lexer)
   (push! _modestack _mode)
@@ -288,33 +291,44 @@
   #'(- (position-line end-pos)
        (position-line start-pos)))
 
-(define pending-tokens '())
-
 (define (token-FEED)
   (token 'FEED "\n"))
 
 (define (token-STRING count char)
   (token 'STRING (make-string count char)))
 
-(define token-LPAREN
-  (token 'LPAREN "("))
+(define (open-bracket! TOKEN)
+  (push! _indents _level)
+  TOKEN)
 
-(define token-RPAREN
-  (token 'RPAREN ")"))
+(define-macro (close-bracket! TOKEN)
+  #'(let ([expected-level (if (empty? _indents)
+                              (rr-error "No matching pair")
+                              (pop! _indents))])
+      (if (> _level expected-level)
+          (append (cap-level! expected-level)
+                (list TOKEN))
+          TOKEN)))
 
-(define token-LSQUARE
-  (token 'LSQUARE "["))
+(define-macro (token-LPAREN!)
+  #'(open-bracket! (token 'LPAREN "(")))
 
-(define token-RSQUARE
-  (token 'RSQUARE "]"))
+(define-macro (token-RPAREN!)
+  #'(close-bracket! (token 'RPAREN ")")))
+
+(define-macro (token-LSQUARE!)
+  #'(open-bracket! (token 'LSQUARE "[")))
+
+(define-macro (token-RSQUARE!)
+  #'(close-bracket! (token 'RSQUARE "]")))
 
 (define (token-LCURLY! [lexer main-lexer])
   (push-mode! lexer)
-  (token 'LCURLY "{"))
+  (open-bracket! (token 'LCURLY "{")))
 
 (define-macro token-RCURLY!
   #'(cond [(empty? _modestack) (rr-error "No matching pair")]
-          [else (pop-mode!) (token 'RCURLY "}")]))
+          [else (pop-mode!) (close-bracket! (token 'RCURLY "}"))]))
 
 (define (token-QUOTE! lexer)
   (push-mode! lexer)
@@ -325,7 +339,7 @@
   (token 'UNQUOTE _mode))
 
 (define (bilang-lexer ip)
-  (if (empty? pending-tokens)
+  (if (empty? _pending-tokens)
       (let* ([produce (_mode ip)]
              [tokens (and (srcloc-token? produce) 
                           (srcloc-token-token produce))])
@@ -336,9 +350,9 @@
                                (srcloc-token t 
                                              (srcloc-token-srcloc produce)))
                              tokens)])
-             (set! pending-tokens (cdr prods))
+             (set! _pending-tokens (cdr prods))
              (car prods))]
           [else produce]))
-      (pop! pending-tokens)))
+      (pop! _pending-tokens)))
 
 (provide bilang-lexer)
