@@ -1,8 +1,8 @@
 #lang br/quicklang
 (provide (rename-out [b-module-begin #%module-begin]))
 
-(define-macro (b-module-begin (expres LINE))
-  #'(#%module-begin LINE))
+(define-macro (b-module-begin (expres EXPR))
+  #'(#%module-begin EXPR))
 
 (define-macro (applyJ A COMMA ...)
   #'(foldl (lambda (f a) (f a))
@@ -50,8 +50,7 @@
 (define-macro (op OP) #''OP)
 
 (define-macro-cases apply1
-  [(apply1 E KV ... (kv0 . ARGS)) #'(append `(,E) KV ... (kv0 . ARGS))]
-  [(apply1 E KV ... E2)           #'(append `(,E) KV ... `(,E2))])
+  [(apply1 E E2)           #'(append `(E) `(E2))])
 
 (define-macro (braces X)
   #'`(quote ,X))
