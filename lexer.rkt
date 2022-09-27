@@ -1,6 +1,5 @@
 #lang br
 (require brag/support syntax/readerr)
-(require racket/trace)
 
 (define-lex-abbrevs
   (digits (:+ (:/ #\0 #\9)))
@@ -88,16 +87,20 @@
 
 (define-macro (linestr STRLEX (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(STRLEX (CUSTOM-CHARS ...)
-            [(:seq "\\{" nextloc) (unexpected-indent)]
-            CUSTOM-RULES ...))
-
-(define-macro (blockstr LET-BS STRLEX (CUSTOM-CHARS ...) CUSTOM-RULES ...)
-  #'(STRLEX (CUSTOM-CHARS ...)
+            CUSTOM-RULES ...
             [(:seq "\\{" nextloc "}") (escape-newline)]
-            [(:seq "\\{" nextloc) (str-interpolate ((token-LCURLY!)) (indentation-error))]
-            [(:seq "\\" nextloc) (str-interpolate () (if LET-BS (rewind! #:until "\\") (unknown-escape)))]
-            [nextloc (extract-whites!)]
-            CUSTOM-RULES ...))
+            [(:seq "\\{" nextloc) (str-interp (begin) ((token-LCURLY!)) (indentation-error))]
+            [(:seq "\\" nextloc) (str-interp (push-mode! (callback (lambda () 
+                                                                           (pop-mode!)
+                                                                           ((callback-func dedent->unquote)))))
+                                             () (if (eq? (quote STRLEX) 'strlexi)
+                                                    (rewind! #:until "\\")
+                                                    (unknown-escape)))]))
+
+(define-macro (blockstr STRLEX (CUSTOM-CHARS ...) CUSTOM-RULES ...)
+  #'(linestr STRLEX (CUSTOM-CHARS ...)
+             CUSTOM-RULES ...
+             [nextloc (extract-whites!)]))
 
 (define-macro s-str
   #'(token-QUOTE! (strlex ()
@@ -114,8 +117,10 @@
                            [(eof) (unterminated-string)])))
 
 (define-macro b-str
-  #'(token-QUOTE! (linestr strlexi (#\( #\) #\{ #\} #\[ #\] #\,)
-                           [(:or #\) #\} #\] #\, newline-char) (rewind! (token-UNQUOTE!))]
+  #'(token-QUOTE! (linestr strlexi (#\( #\) #\{ #\} #\[ #\] #\, #\space #\tab)
+                           [(:or #\) #\} #\] newline-char) (rewind! (token-UNQUOTE!))]
+                           [(:seq spacetabs #\,) (rewind! (token-UNQUOTE!))]
+                           [#\, (list (token-UNQUOTE!) (token 'UNQUOTE-COMMA lexeme))]
                            [#\( (push-mode-str! str-paren)]
                            [#\{ (push-mode-str! str-curly)]
                            [#\[ (push-mode-str! str-square)]
@@ -126,7 +131,7 @@
                                         (cap-level! 0))])))
 
 (define-macro s-block
-  #'(append (list (token-QUOTE! 'DEDENT<-UNQUOTE)
+  #'(append (list (token-QUOTE! dedent->unquote)
                   (indent! (strlex ()
                                    [nextloc (extract-whites!)]
                                    [(eof) (cap-level! 0)])))
@@ -136,12 +141,12 @@
   #'(append (list (token-QUOTE! (lexer-srcloc [d-quote (token-UNQUOTE!)]
                                               [any-char (unterminated-string)]
                                               [(eof) (unterminated-string)]))
-                  (indent! (blockstr #f strlexe () [(eof) (unterminated-string)])))
+                  (indent! (blockstr strlexe () [(eof) (unterminated-string)])))
             (-1LF (extract-whites!))))
 
 (define-macro b-block
-  #'(append (list (token-QUOTE! 'DEDENT<-UNQUOTE)
-                  (indent! (blockstr #t strlexi () [(eof) (cap-level! 0)])))
+  #'(append (list (token-QUOTE! dedent->unquote)
+                  (indent! (blockstr strlexi () [(eof) (cap-level! 0)])))
             (-1LF (extract-whites!))))
 
 (define-macro (push-mode-str! LEXER)
@@ -165,21 +170,22 @@
 (define str-curly (str-mode #\}))
 (define str-square (str-mode #\]))
 
-(define-macro (str-interpolate (EXTRA-TOKEN ...) NODENT)
+(define-macro (str-interp ONDENT (TOKENS ...) NODENT)
   #'(let ([current-dent _dent]
           [next-dent (add1 _dent)]
           [new-dent (measure-dent!)])
       (cond
         [(< new-dent next-dent) NODENT]
         [(= new-dent next-dent) (let ([token-INTERPOLATE (token 'INTERPOLATE (- current-dent _level))])
-                                  (begin (push-mode! (jumpto _level))
+                                  (begin ONDENT
+                                         (push-mode! (jumpto _level))
                                          (set! _level current-dent)
-                                         (list token-INTERPOLATE EXTRA-TOKEN ... (indent!))))]
+                                         (list token-INTERPOLATE TOKENS ... (indent!))))]
         [(> new-dent next-dent) (indentation-error next-dent)])))
 
 (define-macro escape-newline
   #'(let ([current-dent _dent]
-          [new-dent (measure-dent!)])
+          [new-dent (sub1 (measure-dent!))])
       (cond
         [(< new-dent current-dent) (indentation-error)]
         [(= new-dent current-dent) (token 'STRING "")]
@@ -200,6 +206,9 @@
 
 (define-macro unknown-escape
   #'(rr-error (string-append "Unknown escape sequence: " lexeme)))
+
+(define-macro unexpected-newline
+  #'(rr-error "Unexpected newline"))
 
 (define-macro unexpected-indent
   #'(rr-error "Unexpected indentation"))
@@ -222,9 +231,13 @@
   (println x) x)
 
 (define-macro-cases rewind!
-  [(rewind! TOKEN)        #'(rewind! (string-length lexeme) TOKEN)]
-  [(rewind! #:until STR)  #'(rewind! (- (string-length lexeme) (string-length STR)) (token 'STRING STR))]
-  [(rewind! LENGTH TOKEN) #'(begin (file-position input-port (- (file-position input-port) LENGTH)) TOKEN)])
+  [(rewind! TOKEN)        #'(rewind! 0 TOKEN)]
+  [(rewind! #:until STR)  #'(rewind! (string-length STR) (token 'STRING STR))]
+  [(rewind! LENGTH TOKEN) #'(let ([newpos (+ (position-offset start-pos) LENGTH)])
+                                 (file-position input-port (sub1 newpos))
+                                 (set-port-next-location! input-port (position-line start-pos) 
+                                                          (+ (position-col start-pos) LENGTH) newpos)                                 
+                                 TOKEN)])
 
 (define-macro line-diff
   #'(- (position-line end-pos) (position-line start-pos)))
@@ -263,6 +276,12 @@
                               (> _dent _level))
                          (token-STRING (- _dent _level) #\tab)))))
 
+(struct callback (func))
+
+(define dedent->unquote 
+  (callback (lambda () (list (token-UNQUOTE!) 
+                             (token-FEED)))))
+
 (define-macro (measure-dent!)
   #'(begin (set! _dent (string-length (last (string-split lexeme "\n" #:trim? #f))))
            _dent))
@@ -276,8 +295,7 @@
   (set! _level (sub1 _level))
   (pop-mode!)
   (append (list (token 'DEDENT _mode))
-          (concat-if (equal? _mode 'DEDENT<-UNQUOTE) (list (token-UNQUOTE!)
-                                                           (token-FEED)))))
+          (concat-if (callback? _mode) ((callback-func _mode)))))
 
 (define-macro extract-whites!
   #'(cap-level! (min _level (measure-dent!))))
@@ -307,7 +325,7 @@
                               (pop! _indents))])
       (if (> _level expected-level)
           (append (cap-level! expected-level)
-                (list TOKEN))
+                  (list TOKEN))
           TOKEN)))
 
 (define-macro (token-LPAREN!)
@@ -317,7 +335,8 @@
   #'(close-bracket! (token 'RPAREN ")")))
 
 (define-macro (token-LSQUARE!)
-  #'(open-bracket! (token 'LSQUARE "[")))
+  #'(open-bracket! (list (token 'LSQUARE "[")
+                         (token 'BRACKET ''BRACKET))))
 
 (define-macro (token-RSQUARE!)
   #'(close-bracket! (token 'RSQUARE "]")))

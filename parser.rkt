@@ -33,23 +33,24 @@ expres : /feeds expr4
        | e
 
 applyF : (expr2|apply3) /feeds exprE
-       | expr3 /FEED kvE
-apply3 : expr3 /FEED (kvZ|kv0|kvD)
+       | expr3 /FEED+ kvE
+apply3 : expr3 /FEED+ (kvZ|kv0|kvD)
 
 macro  : @op (/SPACE kv0)*
 @mL    : (exprH|whisc|comma) /SPACE
 @mR    : (exprI|kv1|macro1)
 
 macroE : mL? macro /SPACE                         (applyE|commaE|kvE)
-macro3 : mL? macro /SPACE (mR COMMA dent|mR? dent?|applyD|commaD|kvD) /FEED exprE
+macro3 : mL? macro /SPACE (mR COMMA dent|mR? dent?|applyD|commaD|kvD) /FEED+ exprE
 macro2 : mL? macro /SPACE (mR COMMA dent|mR? dent |applyD|commaD|kvD)
 macro1 : mL? macro /SPACE mR
        | mL  macro
 
-@comma : (comma0|commaQ|comma1|applyQ|apply1)                              /COMMA
+@comma : (comma0|commaQ|comma1|applyQ|apply1)                      /COMMA
+       | (string|commaQ|comma1|applyQ|apply1)                      /UNQUOTE-COMMA 
 @specc : (whiscI|commaI|applyI|whiscQ|whiscO|whisc0|whisc1|macro1) /SPACE /COMMA
-@blocc : (apply3|apply2|applyD|comma2|commaD|whisc2|whiscD|macro2) /FEED /COMMA
-@whisc :  specc|                                            expr3 /FEED /COMMA
+@blocc : (apply3|apply2|applyD|comma2|commaD|whisc2|whiscD|macro2) /FEED+ /COMMA
+@whisc :  specc|                                           expr3   /FEED+ /COMMA
 whisc2 : (specc|blocc)                                                   dent
        | (      whisc0|whiscO|whiscQ)(/SPACE       (kv2|apply2|comma2) | dent)
        | (whisc                     ) /SPACE       (kv2|apply2|comma2) | whisc kv2
@@ -60,8 +61,7 @@ whisc1 : (whisc|whisc0|whiscO|whiscQ) /SPACE        exprI
 whiscQ : (whisc|whisc0|whiscO|whiscQ) /SPACE        kv0                | whisc kv0
 whiscO : (whisc|whisc0              )               op
        | (             whiscO       ) /SPACE /COMMA op
-whisc0 : (whisc|whisc0|whiscO       )               dot
-       | (whisc|whisc0|whiscO       )               bracket
+whisc0 : (whisc|whisc0|whiscO       )              (dot|bracket|BIND)
 comma2 : (comma|comma0|commaO|commaQ)(/SPACE       (kv2|apply2)|dent) | comma kv2
 commaD : (comma|comma0|commaO|commaQ) /SPACE       (kvD|applyD)       | comma kvD
 commaE : (comma|comma0|commaO|commaQ) /SPACE       (kvE|applyE)       | comma kvE
@@ -70,8 +70,7 @@ comma1 : (comma|comma0|commaO|commaQ) /SPACE        expr1
 commaQ : (comma|comma0|commaO|commaQ) /SPACE        kv0               | comma kv0
 commaO : (comma|comma0              )               op
        | (             commaO|applyO)        /COMMA op
-comma0 : (comma|comma0|commaO       )               dot
-       | (      comma0|commaO       )               bracket
+comma0 : (comma|comma0|commaO       )              (dot|bracket|BIND)
 
 apply2 : exprQ (/SPACE (apply2|kv2)|dent) | (applyB|bracket) kv2
 applyD : exprQ  /SPACE (applyD|kvD)       | (applyB|bracket) kvD
@@ -101,9 +100,9 @@ nid    : INTEGER ID
 @kvE   : key /feeds exprE
 @kvD   : key dent
 key    : KEYWORD (/SPACE? KEYWORD)*
-op     : OP
-feeds  : FEED | BLANKLINE
 obtain : PARAM PARAM?
+op     : OP
+feeds  : /FEED+ | /BLANKLINE
 solo   : /SOLO
 dot    : /DOT (op|id) BIND?
 string : /QUOTE /INDENT (STRING|interpol|FEED)* /DEDENT /UNQUOTE

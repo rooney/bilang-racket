@@ -58,11 +58,11 @@
 
 (define num    identity)
 (define string identity)
-(define parens identity)
+(define paren  identity)
 (define applyG list)
 
 (define-macro (nuke->kw NUKE)
   #''NUKE)
 
-(provide atom num string parens braces dot op id)
+(provide atom num string paren braces dot op id)
 (provide applyJ j apply1 applyG apply0 applyO kv0)
