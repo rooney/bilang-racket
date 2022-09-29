@@ -42,9 +42,9 @@ macro  : @op (/SPACE kv0)*
 @mL    : (exprH|whisc|comma) /SPACE
 @mR    : (exprI|kv1|macro1)
 
-macroE : mL? macro /SPACE                         (applyE|commaE|kvE)
-macro3 : mL? macro /SPACE (mR COMMA dent|mR? dent?|applyD|commaD|kvD) /FEED+ exprE
-macro2 : mL? macro /SPACE (mR COMMA dent|mR? dent |applyD|commaD|kvD)
+macroE : mL? macro /SPACE                 (applyE|commaE|kvE)
+macro3 : mL? macro (/SPACE (mR COMMA? dent|applyD|commaD|kvD) | dent)? /FEED+ exprE
+macro2 : mL? macro (/SPACE (mR COMMA? dent|applyD|commaD|kvD) | dent)
 macro1 : mL? macro /SPACE mR
        | mL  macro
 
@@ -118,8 +118,9 @@ square   : /LSQUARE (list|tuple) /RSQUARE
 dent     : /INDENT expr4 /DEDENT
 pseudent : /INDENT pseudent? /DEDENT
 
+@gop  : exprG 
+      | /LPAREN /SPACE? op /SPACE? /RPAREN
+@gops : gop (/SPACE gop)*
 tuple : /SPACE? gops /SPACE?
-      | /INDENT gops /DEDENT /FEED
-@gops : (exprG|op) (/SPACE (exprG|op))* (/FEED /SPACE? gops)*
-
-list : /COMMA /SPACE (exprG|op)
+      | /INDENT gops (/FEED gops)* /DEDENT /FEED
+list  : /COMMA /SPACE expr1 (/COMMA /SPACE expr1)* /SPACE?
