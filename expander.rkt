@@ -50,7 +50,7 @@
 (define-macro (op OP) #''OP)
 
 (define-macro-cases apply1
-  [(apply1 E E2)           #'(append `(E) `(E2))])
+  [(apply1 E E2)           #'(append `(E) `(,E2))])
 
 (define-macro (braces X)
   #'`(quote ,X))

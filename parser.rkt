@@ -21,6 +21,8 @@ expres : /feeds expr4
 @expr1 : apply1
        | exprQ
 @exprQ : applyQ
+       | exprG
+@exprG : applyG
        | exprO
 @exprO : applyO
        | obtain
@@ -46,8 +48,8 @@ macro2 : mL? macro /SPACE (mR COMMA dent|mR? dent |applyD|commaD|kvD)
 macro1 : mL? macro /SPACE mR
        | mL  macro
 
-@comma : (comma0|commaQ|comma1|applyQ|apply1)                      /COMMA
-       | (string|commaQ|comma1|applyQ|apply1)                      /UNQUOTE-COMMA 
+@comma : (comma0|commaQ|comma1|applyQ|applyG|apply1)               /COMMA
+       | (string|commaQ|comma1|applyQ|applyG|apply1)               /UNQUOTE-COMMA 
 @specc : (whiscI|commaI|applyI|whiscQ|whiscO|whisc0|whisc1|macro1) /SPACE /COMMA
 @blocc : (apply3|apply2|applyD|comma2|commaD|whisc2|whiscD|macro2) /FEED+ /COMMA
 @whisc :  specc|                                           expr3   /FEED+ /COMMA
@@ -77,7 +79,8 @@ applyD : exprQ  /SPACE (applyD|kvD)       | (applyB|bracket) kvD
 applyE : exprQ  /SPACE (applyE|kvE)       | (applyB|bracket) kvE
 applyI : exprQ  /SPACE (applyI|kv1)       | (applyB|bracket) kv1
 apply1 : exprQ  /SPACE expr1
-applyQ : exprQ  /SPACE kv0 | bracket e | (applyB|bracket) kv0
+applyQ : exprQ  /SPACE kv0
+applyG :                        bracket e | (applyB|bracket) kv0
 applyO : expr0  op
 applyB : (exprO|op) bracket
 apply0 : exprO dot
@@ -108,9 +111,15 @@ dot    : /DOT (op|id) BIND?
 string : /QUOTE /INDENT (STRING|interpol|FEED)* /DEDENT /UNQUOTE
        | /QUOTE         (STRING|interpol)*              /UNQUOTE
 interpol : INTERPOLATE (curly|dent)
-@bracket : paren | curly | square
+@bracket : paren | curly | @square
 paren    : /LPAREN (expr4|@dent /feeds|op) /RPAREN
 curly    : /LCURLY (expr4|@dent /feeds) /RCURLY
-square   : /LSQUARE (expr4?|@dent /feeds) /RSQUARE
+square   : /LSQUARE (list|tuple) /RSQUARE
 dent     : /INDENT expr4 /DEDENT
 pseudent : /INDENT pseudent? /DEDENT
+
+tuple : /SPACE? gops /SPACE?
+      | /INDENT gops /DEDENT /FEED
+@gops : (exprG|op) (/SPACE (exprG|op))* (/FEED /SPACE? gops)*
+
+list : /COMMA /SPACE (exprG|op)

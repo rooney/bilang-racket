@@ -335,8 +335,7 @@
   #'(close-bracket! (token 'RPAREN ")")))
 
 (define-macro (token-LSQUARE!)
-  #'(open-bracket! (list (token 'LSQUARE "[")
-                         (token 'BRACKET ''BRACKET))))
+  #'(open-bracket! (token 'LSQUARE "[")))
 
 (define-macro (token-RSQUARE!)
   #'(close-bracket! (token 'RSQUARE "]")))
