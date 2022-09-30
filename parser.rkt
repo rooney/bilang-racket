@@ -1,6 +1,6 @@
 #lang brag
 
-expr3s : /feeds expr4
+expres : /feeds expr4
 @expr4 : /SPACE? expr3 /(SPACE|feeds|pseudent)*
 @expr3 : apply3|comma3|speck3|newlk3
        | applyE|macro3|macro2|macro1
@@ -129,14 +129,20 @@ paren    : /LPAREN (expr4|@dent /feeds|op) /RPAREN
 curly    : /LCURLY (expr4|@dent /feeds) /RCURLY
 square   : /LSQUARE (list|tuple) /RSQUARE
 dent     : /INDENT expr4 /DEDENT
-blockey  : /INDENT kvZ (/FEED kvZ)* /DEDENT
 pseudent : /INDENT pseudent? /DEDENT
+blockey  : /INDENT kvZ (/FEED kvZ)* /DEDENT
 @denty   : dent | blockey
 
-@gees : exprG (/SPACE exprG)*
-@cos1 : /COMMA /SPACE expr1
-tuple : /SPACE? gees /SPACE?
-      | /INDENT gees (/FEED gees)* /DEDENT /FEED
-list  : cos1+ (/FEED cos1+)* /SPACE
-      | (/COMMA /INDENT expr3 /DEDENT /FEED)+
-      | /INDENT /COMMA /SPACE expr2 (/FEED /COMMA /SPACE expr2)* /DEDENT /FEED
+@Gs    : exprG (/SPACE exprG)*
+@cs1   : /COMMA /SPACE expr1
+@csz   : /COMMA /SPACE (macro1|macro2|expr2) 
+@cdent : /COMMA /INDENT expr3 /DEDENT
+tuple  : /SPACE? Gs /SPACE?
+       | /INDENT Gs (/FEED+ Gs)* /DEDENT /FEED
+list   : cs1+ (/FEED cs1+)* /SPACE
+       | (cdent /FEED)+
+       | /INDENT csz /DEDENT /FEED
+       | /INDENT ((csz|cdent) /FEED)+ csz? /DEDENT /FEED
+       | /feeds?
+
+
