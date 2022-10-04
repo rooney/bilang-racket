@@ -8,18 +8,18 @@
   (decimal (:seq integer #\. number))
   (alpha (:/ #\a #\z #\A #\Z))
   (alnum (:/ #\a #\z #\A #\Z #\0 #\9))
-  (name (:seq alpha
-              (:* alnum)
-              (:* (:seq (:or "-" "+" "/" "<-" "->") (:+ alnum)))))
+  (name (:or (:seq (:? (:seq digits opchar (:* (:or digits opchar))))
+                   alpha
+                   (:* alnum)
+                   (:* (:seq (:+ opchar) (:+ alnum))))))
   (identifier (:seq name prime?))
-  (name/op (:or name operator))
-  (keyname (:seq name/op (:* (:seq (:? #\.) name/op)) prime?))
-  (keyword (:seq keyname #\:))
-  (param (:seq #\: (:? keyname)))
+  (nid (:seq (:or integer decimal) (:+ alpha) prime?))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
-  (operator (:seq (:+ (:or (char-set "+*/\\-~=><?!&|^#%$@") ".." "...")) prime?))
+  (opchar (char-set "+*/\\-~=><?!&|^#%$@"))
+  (op (:+ (:or opchar ".." "...")))
+  (operator (:seq op prime?))
   (s-quote #\')
   (d-quote #\")
   (b-quote #\`)
@@ -42,8 +42,9 @@
    [operator (token 'OP (string->symbol lexeme))]
    [decimal (token 'DECIMAL (string->number lexeme))]
    [integer (token 'INTEGER (string->number lexeme))]
-   [keyword (token 'KEYWORD (string->symbol lexeme))]
-   [param (token 'PARAM (string->symbol lexeme))]
+   [nid (let ([n (car (regexp-match #rx"[-1234567890.]+" lexeme))])
+             (list (token 'INTEGER (string->number n))
+                   (token 'ID (string->symbol (substring lexeme (string-length n))))))]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
@@ -51,15 +52,16 @@
    [d-quote d-str]
    [b-quote b-str]
    [",," (rr-error (string-append "Unexpected " lexeme))]
-   ["{," (list (token-LCURLY!) (token 'SOLO ''SOLO))]
+   ["{," (list (token-LBRACE!) (token 'SOLO ''SOLO))]
    ["()" (token 'BIND ''BIND)]
    [#\( (token-LPAREN!)]
    [#\) (token-RPAREN!)]
-   [#\[ (token-LSQUARE!)]
-   [#\] (token-RSQUARE!)]
-   [#\{ (token-LCURLY!)]
-   [#\} (token-RCURLY!)]
+   [#\[ (token-LBRACKET!)]
+   [#\] (token-RBRACKET!)]
+   [#\{ (token-LBRACE!)]
+   [#\} (token-RBRACE!)]
    [#\. (token 'DOT (string->symbol lexeme))]
+   [#\: (token 'COLON (string->symbol lexeme))]
    [#\; (token 'SEMICOLON (string->symbol lexeme))]
    [#\, (token 'COMMA (string->symbol lexeme))]
    [(eof) (if (> _level 0)
@@ -74,7 +76,7 @@
 (define-macro (strlexi (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(strlex (#\\ CUSTOM-CHARS ...)
             [(:seq "\\{" spacetabs? "}") (token 'STRING "\\")]
-            [(:seq "\\{" spacetabs?) (list (token 'INTERPOLATE 0) (token-LCURLY!))]
+            [(:seq "\\{" spacetabs?) (list (token 'INTERPOLATE 0) (token-LBRACE!))]
             CUSTOM-RULES ...))
 
 (define-macro (strlexe (CUSTOM-CHARS ...) CUSTOM-RULES ...)
@@ -89,7 +91,7 @@
   #'(STRLEX (CUSTOM-CHARS ...)
             CUSTOM-RULES ...
             [(:seq "\\{" nextloc "}") (escape-newline)]
-            [(:seq "\\{" nextloc) (str-interp (begin) ((token-LCURLY!)) (indentation-error))]
+            [(:seq "\\{" nextloc) (str-interp (begin) ((token-LBRACE!)) (indentation-error))]
             [(:seq "\\" nextloc) (str-interp (push-mode! (callback (lambda () 
                                                                            (pop-mode!)
                                                                            ((callback-func dedent->unquote)))))
@@ -122,8 +124,8 @@
                            [(:seq spacetabs #\,) (rewind! (token-UNQUOTE!))]
                            [#\, (list (token-UNQUOTE!) (token 'UNQUOTE-COMMA lexeme))]
                            [#\( (push-mode-str! str-paren)]
-                           [#\{ (push-mode-str! str-curly)]
-                           [#\[ (push-mode-str! str-square)]
+                           [#\{ (push-mode-str! str-brace)]
+                           [#\[ (push-mode-str! str-bracket)]
                            [(:seq #\\ nextloc) (if (>= _dent (measure-dent!))
                                                    (rewind! #:until "\\")
                                                    (unexpected-indent))]
@@ -160,15 +162,15 @@
 (define-macro (str-mode TERMINATOR)
   #'(strlexi (#\( #\) #\{ #\} #\[ #\])
              [#\( (push-mode-str! str-paren)]
-             [#\{ (push-mode-str! str-curly)]
-             [#\[ (push-mode-str! str-square)]
+             [#\{ (push-mode-str! str-brace)]
+             [#\[ (push-mode-str! str-bracket)]
              [TERMINATOR (pop-mode-str!)]
              [(:or #\) #\} #\]) (rr-error "Mismatched bracket")]
              [(eof) (rr-error "Missing closing bracket")]))
 
 (define str-paren (str-mode #\)))
-(define str-curly (str-mode #\}))
-(define str-square (str-mode #\]))
+(define str-brace (str-mode #\}))
+(define str-bracket (str-mode #\]))
 
 (define-macro (str-interp ONDENT (TOKENS ...) NODENT)
   #'(let ([current-dent _dent]
@@ -334,19 +336,19 @@
 (define-macro (token-RPAREN!)
   #'(close-bracket! (token 'RPAREN ")")))
 
-(define-macro (token-LSQUARE!)
-  #'(open-bracket! (token 'LSQUARE "[")))
+(define-macro (token-LBRACKET!)
+  #'(open-bracket! (token 'LBRACKET "[")))
 
-(define-macro (token-RSQUARE!)
-  #'(close-bracket! (token 'RSQUARE "]")))
+(define-macro (token-RBRACKET!)
+  #'(close-bracket! (token 'RBRACKET "]")))
 
-(define (token-LCURLY! [lexer main-lexer])
+(define (token-LBRACE! [lexer main-lexer])
   (push-mode! lexer)
-  (open-bracket! (token 'LCURLY "{")))
+  (open-bracket! (token 'LBRACE "{")))
 
-(define-macro token-RCURLY!
+(define-macro token-RBRACE!
   #'(cond [(empty? _modestack) (rr-error "No matching pair")]
-          [else (pop-mode!) (close-bracket! (token 'RCURLY "}"))]))
+          [else (pop-mode!) (close-bracket! (token 'RBRACE "}"))]))
 
 (define (token-QUOTE! lexer)
   (push-mode! lexer)
