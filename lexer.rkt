@@ -304,7 +304,7 @@
 
 (define-macro -1LF
   #'(let ([whites extract-whites!])
-      (if (equal? 'FEED (token-struct-type (car whites)))
+      (if (equal? 'LINEFEED (token-struct-type (car whites)))
           (cdr whites) whites)))
 
 (define-macro numLF
@@ -312,7 +312,7 @@
        (position-line start-pos)))
 
 (define (token-FEED)
-  (token 'FEED "\n"))
+  (token 'LINEFEED "\n"))
 
 (define (token-STRING count char)
   (token 'STRING (make-string count char)))

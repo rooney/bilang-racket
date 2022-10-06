@@ -19,11 +19,11 @@ expres : /feeds expr4
 @expr1 : apply1
        | exprQ
 @exprQ : applyQ
-       | exprB
-@exprB : applyB
+       | exprC
+@exprC : applyC
+       | param
        | exprO
 @exprO : applyO
-       | obtain
        | expr0
 @expr0 : apply0
        | applyG
@@ -33,8 +33,8 @@ expres : /feeds expr4
        | e
 
 applyE : exprZ /feeds expr3
-       | exprZ /FEED+ kv3
-applyZ : exprZ /FEED+ kvZ
+       | exprZ /LINEFEED+ kv3
+applyZ : exprZ /LINEFEED+ kvZ
 
 macro  : @op (/SPACE kv0)*
 @mR    : (exprI|macro1|kv1)
@@ -45,17 +45,17 @@ macro  : @op (/SPACE kv0)*
 macro1 : mL  macro
        | mL? macro /SPACE mR
 macro2 : mL? macro (/SPACE (mR COMMA? denty|applyD|commaD|kvD) | denty)
-macro3 : mL? macro (/SPACE (mR COMMA? denty|applyD|commaD|kvD) | denty)? /FEED+ expr3
+macro3 : mL? macro (/SPACE (mR COMMA? denty|applyD|commaD|kvD) | denty)? /LINEFEED+ expr3
        | mL? macro /SPACE                  (apply3|comma3|kv3)
 
-@comma : (string|commaQ|comma1|applyQ|applyB|apply1) /UNQUOTE-COMMA
-       | (comma0|commaQ|comma1|applyQ|applyB|apply1) /COMMA 
+@comma : (string|commaQ|comma1|applyQ|applyC|apply1) /UNQUOTE-COMMA
+       | (comma0|commaQ|comma1|applyQ|applyC|apply1) /COMMA 
 @speck : (speck0|speckO|speckQ|speck1|
           newlk0|newlkO|newlkQ|newlk1|
           newlkI|speckI|commaI|applyI|macro1)        /SPACE /COMMA
 @block : (newlk2|speck2|comma2|apply2|macro2|
-          newlkD|speckD|commaD|applyD|applyZ)        /FEED+ /COMMA
-@newlk :               (macro1|macro2|exprZ)         /FEED+ /COMMA
+          newlkD|speckD|commaD|applyD|applyZ)        /LINEFEED+ /COMMA
+@newlk :               (macro1|macro2|exprZ)         /LINEFEED+ /COMMA
 
 newlk3 : (newlk|newlk0|newlkO|newlkQ)  /SPACE        (kv3|apply3|comma3) | newlk kv3
 newlk2 : (block                     )                                      denty
@@ -93,9 +93,9 @@ applyD : exprQ  /SPACE (applyD|kvD)        | (applyG|grouping) kvD
 applyI : exprQ  /SPACE (applyI|kv1)        | (applyG|grouping) kv1
 apply1 : exprQ  /SPACE expr1
 applyQ : exprQ  /SPACE kv0
-applyB :                        grouping e | (applyG|grouping) kv0
-applyO : expr0  op
-applyG : (exprO|op) grouping
+applyC :                        grouping e | (applyG|grouping) kv0
+applyO : expr0 op
+applyG : (exprO|op|param) grouping
 apply0 : exprO dot
        | op (e|dot)
        | id (id|nid)
@@ -116,9 +116,9 @@ nid    : INTEGER ID
 @kv3   : key /feeds expr3
 @kvD   : key dent
 key    : pub /COLON (/SPACE? pub /COLON)*
-obtain : (/COLON pub)? /COLON priv?
+param  : (/COLON pub)? /COLON priv?
 op     : OP
-feeds  : /FEED+ | /BLANKLINE
+feeds  : /LINEFEED+ | /BLANKLINE
 solo   : /SOLO
 dot    : /DOT (op|id|op id|nid) BIND?
 tup    : /DOT (op|id)?
@@ -133,7 +133,7 @@ bracket   : /LBRACKET (list|tuple) /RBRACKET
 
 @denty   : dent | blockey
 dent     : /INDENT expr4 /DEDENT
-blockey  : /INDENT kvZ (/FEED kvZ)* /DEDENT
+blockey  : /INDENT kvZ (/LINEFEED kvZ)* /feeds? /DEDENT
 pseudent : /INDENT pseudent? /DEDENT
 
 pub      : pubname op?
@@ -145,12 +145,12 @@ privname : priv dot
          | op|dot|id|nid
          | op (dot|id|nid)
 
-@Bs    : exprB (/SPACE exprB)*
-@cs1   : /COMMA /SPACE expr1
-@sz    : /SPACE (macro1|macro2|expr2) 
-tuple  : /SPACE? Bs (/FEED+ Bs)* /SPACE?
-       | /INDENT Bs (/FEED+ Bs)* /DEDENT /FEED
-       | /INDENT (tup    (sz|dent) /FEED)* (tup    sz)? /DEDENT /FEED
-list   : /INDENT (/COMMA (sz|dent) /FEED)* (/COMMA sz)? /DEDENT /FEED
-       | cs1+ (/FEED cs1+)* /SPACE
-       | /feeds?
+@clumps : exprC (/SPACE exprC)*
+@cs1    : /COMMA /SPACE expr1
+@sz     : /SPACE (macro1|macro2|expr2) 
+tuple   : /SPACE? clumps (/LINEFEED+ clumps)* /SPACE?
+        | /INDENT clumps (/LINEFEED+ clumps)* /DEDENT /LINEFEED
+        | /INDENT (tup    (sz|dent) /LINEFEED)* (tup    sz)? /DEDENT /LINEFEED
+list    : /INDENT (/COMMA (sz|dent) /LINEFEED)* (/COMMA sz)? /DEDENT /LINEFEED
+        | cs1+ (/LINEFEED cs1+)* /SPACE
+        | /feeds?
