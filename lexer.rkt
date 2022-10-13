@@ -8,25 +8,35 @@
   (decimal (:seq integer #\. number))
   (alpha (:/ #\a #\z #\A #\Z))
   (alnum (:/ #\a #\z #\A #\Z #\0 #\9))
-  (name (:or (:seq (:? (:seq digits opchar (:* (:or digits opchar))))
-                   alpha
-                   (:* alnum)
-                   (:* (:seq (:+ opchar) (:+ alnum))))))
-  (identifier (:seq name prime?))
-  (nid (:seq (:or integer decimal) (:+ alpha) prime?))
+  (identifier (:or (:seq (:? (:seq digits opchar (:* (:or digits opchar))))
+                         alpha
+                         (:* alnum)
+                         (:* (:seq (:+ opchar) (:+ alnum))))))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
   (opchar (char-set "+*/\\-~=><?!&|^#%$@"))
-  (op (:+ (:or opchar ".." "...")))
-  (operator (:seq op prime?))
+  (operator (:+ (:or opchar ".." "...")))
   (s-quote #\')
   (d-quote #\")
   (b-quote #\`)
-  (prime? (:* s-quote))
+  (prime (:+ s-quote))
   (space/tab (:or #\space #\tab))
   (spacetabs (:+ space/tab))
   (spacetabs? (:* space/tab)))
+
+(define-macro (lexfuse TOKEN LEXER ...)
+  #'(foldl (lambda (lexer tokens) (with-handlers ([exn:fail:read? (lambda (e) (rewind! 1 #f) tokens)])
+                                    (append tokens (list (lexer _ip)))))
+           (list TOKEN) (list LEXER ...)))
+
+(define alphid-lexer
+  (lexer-srcloc
+   [alpha (token 'ID (string->symbol lexeme))]))
+
+(define prime-lexer
+  (lexer-srcloc
+   [prime (token 'PRIME (string->symbol lexeme))]))
 
 (define main-lexer
   (lexer-srcloc
@@ -38,13 +48,10 @@
                 [(= dent _level) (if (> (line-diff) 1) (token 'BLANKLINE lexeme) (token-FEED))]
                 [(< dent _level) (cap-level! dent)]))]
    [spacetabs (token 'SPACE lexeme)]
-   [identifier (token 'ID (string->symbol lexeme))]
-   [operator (token 'OP (string->symbol lexeme))]
+   [identifier (lexfuse (token 'ID (string->symbol lexeme)) prime-lexer)]
+   [operator (lexfuse (token 'OP (string->symbol lexeme)) prime-lexer)]
    [decimal (token 'DECIMAL (string->number lexeme))]
-   [integer (token 'INTEGER (string->number lexeme))]
-   [nid (let ([n (car (regexp-match #rx"[-1234567890.]+" lexeme))])
-             (list (token 'INTEGER (string->number n))
-                   (token 'ID (string->symbol (substring lexeme (string-length n))))))]
+   [integer (lexfuse (token 'INTEGER (string->number lexeme)) alphid-lexer prime-lexer)]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
@@ -93,8 +100,8 @@
             [(:seq "\\{" nextloc "}") (escape-newline)]
             [(:seq "\\{" nextloc) (str-interp (begin) ((token-LBRACE!)) (indentation-error))]
             [(:seq "\\" nextloc) (str-interp (push-mode! (callback (lambda () 
-                                                                           (pop-mode!)
-                                                                           ((callback-func dedent->unquote)))))
+                                                                     (pop-mode!)
+                                                                     ((callback-func dedent->unquote)))))
                                              () (if (eq? (quote STRLEX) 'strlexi)
                                                     (rewind! #:until "\\")
                                                     (unknown-escape)))]))
@@ -235,15 +242,16 @@
 (define-macro-cases rewind!
   [(rewind! TOKEN)        #'(rewind! 0 TOKEN)]
   [(rewind! #:until STR)  #'(rewind! (string-length STR) (token 'STRING STR))]
-  [(rewind! LENGTH TOKEN) #'(let ([newpos (+ (position-offset start-pos) LENGTH)])
-                                 (file-position input-port (sub1 newpos))
-                                 (set-port-next-location! input-port (position-line start-pos) 
-                                                          (+ (position-col start-pos) LENGTH) newpos)                                 
-                                 TOKEN)])
+  [(rewind! EATLEN TOKEN) #'(let ([newpos (+ (position-offset start-pos) EATLEN)])
+                              (file-position input-port (sub1 newpos))
+                              (set-port-next-location! input-port (position-line start-pos) 
+                                                       (+ (position-col start-pos) EATLEN) newpos)                                 
+                              TOKEN)])
 
 (define-macro line-diff
   #'(- (position-line end-pos) (position-line start-pos)))
 
+(define _ip 'input-port)
 (define _pending-tokens (list))
 (define _indents (list))
 (define _modestack (list))
@@ -359,6 +367,7 @@
   (token 'UNQUOTE _mode))
 
 (define (bilang-lexer ip)
+  (set! _ip ip)
   (if (empty? _pending-tokens)
       (let* ([produce (_mode ip)]
              [tokens (and (srcloc-token? produce) 
@@ -367,8 +376,8 @@
           [(empty? tokens) (bilang-lexer ip)]
           [(list? tokens)
            (let ([prods (map (lambda (t)
-                               (srcloc-token t 
-                                             (srcloc-token-srcloc produce)))
+                               (if (srcloc-token? t) t
+                                   (srcloc-token t (srcloc-token-srcloc produce))))
                              tokens)])
              (set! _pending-tokens (cdr prods))
              (car prods))]
