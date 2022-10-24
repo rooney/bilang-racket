@@ -8,19 +8,19 @@
   (decimal (:seq integer #\. number))
   (alpha (:/ #\a #\z #\A #\Z))
   (alnum (:/ #\a #\z #\A #\Z #\0 #\9))
-  (identifier (:seq alpha (:* alnum)))
-  (id (:or (:seq (:? (:seq digits opchar (:* (:or digits opchar))))
-                 identifier
-                 (:* (:seq (:+ opchar) (:+ alnum))))))
+  (identifier (:seq alpha
+                    (:* alnum)
+                    (:* (:seq (:+ opchar) (:+ alnum)))
+                    prime?))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
   (opchar (char-set "+*/\\-~=><?!&|^#%$@"))
-  (operator (:+ (:or opchar ".." "...")))
+  (operator (:seq (:+ (:or opchar ".." "...")) prime?))
   (s-quote #\')
   (d-quote #\")
   (b-quote #\`)
-  (prime (:+ s-quote))
+  (prime? (:* s-quote))
   (space/tab (:or #\space #\tab))
   (spacetabs (:+ space/tab))
   (spacetabs? (:* space/tab)))
@@ -36,11 +36,9 @@
                 [(< dent _level) (cap-level! dent)]))]
    [integer (lookahead alphid-lexer (token 'INTEGER (string->number lexeme)))]
    [decimal (lookahead alphid-lexer (token 'DECIMAL (string->number lexeme)))]
-   [spacetabs (token 'SPACE lexeme)]
-   [id (token 'ID (string->symbol lexeme))]
    [operator (token 'OP (string->symbol lexeme))]
-   [(:seq id prime) (token 'IDX (string->symbol lexeme))]
-   [(:seq operator prime) (token 'OPX (string->symbol lexeme))]
+   [identifier (token 'ID (string->symbol lexeme))]
+   [spacetabs (token 'SPACE lexeme)]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
@@ -66,8 +64,7 @@
 
 (define alphid-lexer
   (sublexer
-   [identifier (token 'ID (string->symbol lexeme))]
-   [(:seq identifier prime) (token 'IDX (string->symbol lexeme))]))
+   [(:seq alpha (:* alnum) prime?) (token 'ID (string->symbol lexeme))]))
 
 (define-macro (sublexer RULES ...)
   #'(lexer-srcloc RULES ...
