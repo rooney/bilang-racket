@@ -16,7 +16,7 @@
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
   (opchar (char-set "+*/\\-~=><?!&|^#%$@"))
-  (operator (:seq (:+ (:or opchar ".." "...")) prime?))
+  (operator (:seq (:+ opchar) prime?))
   (s-quote #\')
   (d-quote #\")
   (b-quote #\`)
@@ -34,11 +34,15 @@
                 [(= dent next-level) (indent!)]
                 [(= dent _level) (if (> (line-diff) 1) (token 'BLANKLINE lexeme) (token-LINEFEED))]
                 [(< dent _level) (cap-level! dent)]))]
-   [integer (lookahead alphid-lexer (token 'INTEGER (string->number lexeme)))]
-   [decimal (lookahead alphid-lexer (token 'DECIMAL (string->number lexeme)))]
-   [operator (token 'OP (string->symbol lexeme))]
-   [identifier (token 'ID (string->symbol lexeme))]
    [spacetabs (token 'SPACE lexeme)]
+   [identifier (token 'ID (string->symbol lexeme))]
+   [operator (token 'OP (string->symbol lexeme))]
+   [integer (lookahead alphid-lexer (token 'INTEGER (string->number (string-replace lexeme "_" ""))))]
+   [decimal (lookahead alphid-lexer (token 'DECIMAL (string->number (string-replace lexeme "_" ""))))]
+   [(:seq #\. (:or (:seq (:* opchar) identifier)
+                   (:seq (:+ opchar) prime?))) (token 'DOT (string->symbol (substring lexeme 1 (string-length lexeme))))]
+   [(:seq (:+ (:or alnum opchar)) prime? #\:) (token 'KEY (string->symbol (substring lexeme 0 (sub1 (string-length lexeme)))))]
+   [(:seq #\: (:+ (:or alnum opchar)) prime?) (token 'PUBKEY lexeme)]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
@@ -54,10 +58,8 @@
    [#\} (token-RBRACE!)]
    [#\[ (token-LSQUARE!)]
    [#\] (token-RSQUARE!)]
-   [#\. (token 'DOT (string->symbol lexeme))]
-   [#\: (token 'COLON (string->symbol lexeme))]
-   [#\; (token 'SEMICOLON (string->symbol lexeme))]
-   [#\, (token 'COMMA (string->symbol lexeme))]
+   [#\; (token 'SEMICOLON lexeme)]
+   [#\, (token 'COMMA lexeme)]
    [(eof) (if (> _level 0)
               (cap-level! 0) 
               (void))]))

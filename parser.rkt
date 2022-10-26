@@ -128,14 +128,14 @@ string : /QUOTE /INDENT (STRING|interp|LINEFEED)* /DEDENT /UNQUOTE
        | /QUOTE         (STRING|interp)*                  /UNQUOTE
 interp : INTERPOLATE (brace|dent)
 
-@grouping : paren | brace | @square
+@grouping : paren | brace | square
 paren     : /LPAREN (expr4|@dent /feeds|opx) /RPAREN
 brace     : /LBRACE (expr4|@dent /feeds) /RBRACE
 square    : /LSQUARE (list|tuple) /RSQUARE
 
 @denty   : dent | blockey
 dent     : /INDENT expr4 /DEDENT
-blockey  : /INDENT kvZ (/LINEFEED kvZ)* /feeds? /DEDENT
+blockey  : /INDENT kvZ (/LINEFEED+ kvZ)* /feeds? /DEDENT
 pseudent : /INDENT pseudent? /DEDENT
 
 @clumps : exprC (/SPACE exprC)*
