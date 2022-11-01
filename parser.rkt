@@ -117,7 +117,7 @@ nid    : (int|dec) id
 @kv3   : key /feeds expr3
 @kvD   : key dent
 key    : KEY (/SPACE? KEY)*
-param  : PARAM id? 
+param  : PARAM op? id? op? dot*
 op     : OP
 dot    : DOT op? BIND?
 feeds  : /LINEFEED+ | /BLANKLINE

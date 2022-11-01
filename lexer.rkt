@@ -44,7 +44,8 @@
    [(:seq #\. (:or (:seq (:* opchar) identifier)
                    (:seq (:+ opchar) prime?))) (token 'DOT (string->symbol (substring lexeme 1 (string-length lexeme))))]
    [(:seq pubkey #\:)                          (token 'KEY (string->symbol (substring lexeme 0 (sub1 (string-length lexeme)))))]
-   [(:seq (:? (:seq #\: (:? pubkey))) #\:)   (token 'PARAM (string->symbol (substring lexeme 1 (sub1 (string-length lexeme)))))]
+   [(:seq #\: (:? pubkey) #\:)               (token 'PARAM (string->symbol (substring lexeme 1 (sub1 (string-length lexeme)))))]
+   [(:seq                 #\:)               (token 'PARAM (string->symbol ""))]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
