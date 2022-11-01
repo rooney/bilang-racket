@@ -8,9 +8,11 @@
   (decimal (:seq integer #\. number))
   (alpha (:/ #\a #\z #\A #\Z))
   (alnum (:/ #\a #\z #\A #\Z #\0 #\9))
+  (alnops (:seq (:+ (:or alnum opchar)) prime?))
+  (pubkey (:seq alnops (:* (:seq #\. alnops))))
   (identifier (:seq alpha
                     (:* alnum)
-                    (:* (:seq (:+ opchar) (:+ alnum)))
+                    (:* (:seq (:+ (char-set "+/-><?")) (:+ alnum)))
                     prime?))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
@@ -41,8 +43,8 @@
    [decimal (lookahead alphid-lexer (token 'DECIMAL (string->number (string-replace lexeme "_" ""))))]
    [(:seq #\. (:or (:seq (:* opchar) identifier)
                    (:seq (:+ opchar) prime?))) (token 'DOT (string->symbol (substring lexeme 1 (string-length lexeme))))]
-   [(:seq (:+ (:or alnum opchar)) prime? #\:) (token 'KEY (string->symbol (substring lexeme 0 (sub1 (string-length lexeme)))))]
-   [(:seq #\: (:+ (:or alnum opchar)) prime?) (token 'PUBKEY lexeme)]
+   [(:seq pubkey #\:)                          (token 'KEY (string->symbol (substring lexeme 0 (sub1 (string-length lexeme)))))]
+   [(:seq (:? (:seq #\: (:? pubkey))) #\:)   (token 'PARAM (string->symbol (substring lexeme 1 (sub1 (string-length lexeme)))))]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
