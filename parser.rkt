@@ -22,12 +22,13 @@ expres : /feeds expr4
        | exprC
 @exprC : applyC
        | param
+       | exprB
+@exprB : applyB
+       | bracket
        | exprO
 @exprO : applyO
        | expr0
 @expr0 : apply0
-       | applyB
-       | bracket
        | dot
        | solo
        | e
@@ -93,33 +94,33 @@ applyD : exprQ  /SPACE (applyD|kvD)        | (applyB|bracket) kvD
 applyI : exprQ  /SPACE (applyI|kv1)        | (applyB|bracket) kv1
 apply1 : exprQ  /SPACE expr1
 applyQ : exprC (/SPACE kv0)+
-applyC :                        bracket e | (applyB|bracket) kv0
-applyO : expr0 op
-applyB : (exprO|op|param) bracket
+applyC :                                     (applyB|bracket) kv0
+applyB : (exprB|op|param) bracket          | (applyB|bracket) exprO
+applyO : exprO op
 apply0 : exprO dot
-       | op (dot|e)
-       | id (id|nid)
+       | expr0 e
+       | op (e|dot)
 
-@e : string
-   | id
-   | nid
-   | int
-   | dec
+nx     : (int|dec) id
+@e     : nx
+       | int
+       | dec
+       | id
+       | string
 
 int    : INTEGER
 dec    : DECIMAL
-nid    : (int|dec) id
-@id    : ID
+id     : ID PRIME?
+op     : OP PRIME?
 @kv0   : key (exprO|op)
 @kv1   : key /SPACE (macro1|exprI)
 @kv2   : key /SPACE (macro2|comma2|apply2)
 @kvZ   : key /SPACE (macro1|macro2|expr2)|kvD|kv0
 @kv3   : key /feeds expr3
 @kvD   : key dent
-key    : KEY (/SPACE? KEY)*
-param  : PARAM op? id? op? dot*
-op     : OP
-dot    : DOT op? BIND?
+key    : (int|dec|id|op|dot)+ /COLON
+param  : (/COLON (int|dec|id|op|dot)*)? /COLON id? dot*
+dot    : /DOT (OP? ID op|OP? id|op) BIND?
 feeds  : /LINEFEED+ | /BLANKLINE
 solo   : /SOLO
 string : /QUOTE /INDENT (STRING|interp|LINEFEED)* /DEDENT /UNQUOTE

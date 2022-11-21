@@ -8,17 +8,12 @@
   (decimal (:seq integer #\. number))
   (alpha (:/ #\a #\z #\A #\Z))
   (alnum (:/ #\a #\z #\A #\Z #\0 #\9))
-  (alnops (:seq (:+ (:or alnum opchar)) prime?))
-  (pubkey (:seq alnops (:* (:seq #\. alnops))))
-  (identifier (:seq alpha
-                    (:* alnum)
-                    (:* (:seq (:+ (char-set "+/-><?")) (:+ alnum)))
-                    prime?))
+  (alname (:seq alpha (:* alnum)))
+  (identifier (:seq alname (:* (:seq (:+ (char-set "+/-><")) (:+ alnum))) prime?))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
-  (opchar (char-set "+*/\\-~=><?!&|^#%$@"))
-  (operator (:seq (:+ opchar) prime?))
+  (operator (:seq (:+ (char-set "+*/\\-~=><?!&|^#%$@")) prime?))
   (s-quote #\')
   (d-quote #\")
   (b-quote #\`)
@@ -36,16 +31,11 @@
                 [(= dent next-level) (indent!)]
                 [(= dent _level) (if (> (line-diff) 1) (token 'BLANKLINE lexeme) (token-LINEFEED))]
                 [(< dent _level) (cap-level! dent)]))]
-   [spacetabs (token 'SPACE lexeme)]
-   [identifier (token 'ID (string->symbol lexeme))]
-   [operator (token 'OP (string->symbol lexeme))]
-   [integer (lookahead alphid-lexer (token 'INTEGER (string->number (string-replace lexeme "_" ""))))]
-   [decimal (lookahead alphid-lexer (token 'DECIMAL (string->number (string-replace lexeme "_" ""))))]
-   [(:seq #\. (:or (:seq (:* opchar) identifier)
-                   (:seq (:+ opchar) prime?))) (token 'DOT (string->symbol (substring lexeme 1 (string-length lexeme))))]
-   [(:seq pubkey #\:)                          (token 'KEY (string->symbol (substring lexeme 0 (sub1 (string-length lexeme)))))]
-   [(:seq #\: (:? pubkey) #\:)               (token 'PARAM (string->symbol (substring lexeme 1 (sub1 (string-length lexeme)))))]
-   [(:seq                 #\:)               (token 'PARAM (string->symbol ""))]
+   [spacetabs  (token 'SPACE lexeme)]
+   [identifier (parse-prime 'ID)]
+   [operator   (parse-prime 'OP)]
+   [(:seq integer (:? alname) prime?) (parse-num 'INTEGER)]
+   [(:seq decimal (:? alname) prime?) (parse-num 'DECIMAL)]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
@@ -61,20 +51,40 @@
    [#\} (token-RBRACE!)]
    [#\[ (token-LSQUARE!)]
    [#\] (token-RSQUARE!)]
-   [#\; (token 'SEMICOLON lexeme)]
+   [#\. (token 'DOT lexeme)]
    [#\, (token 'COMMA lexeme)]
+   [#\: (token 'COLON lexeme)]
+   [#\; (token 'SEMICOLON lexeme)]
    [(eof) (if (> _level 0)
               (cap-level! 0) 
               (void))]))
 
-(define alphid-lexer
-  (sublexer
-   [(:seq alpha (:* alnum) prime?) (token 'ID (string->symbol lexeme))]))
+(define-macro (parse-num TYPE)
+  #'(let* ([length (string-length lexeme)]
+           [num-pos (car (regexp-match-positions #rx"[1234567890._]+" lexeme))]
+           [num-end (cdr num-pos)]
+           [prime-pos (regexp-match-positions #rx"[']+" lexeme)]
+           [prime-start (if prime-pos (caar prime-pos) length)])
+      (append (subtoken TYPE (lambda (x) (string->number (string-replace x "_" ""))) 0 num-end)
+              (if (> prime-start num-end) (subtoken 'ID string->symbol num-end prime-start) empty)
+              (if prime-pos (subtoken 'PRIME string->symbol prime-start length) empty))))
 
-(define-macro (sublexer RULES ...)
-  #'(lexer-srcloc RULES ...
-                  [any-char (rewind! (void))]
-                  [(eof) (void)]))
+(define-macro (parse-prime TYPE)
+  #'(let* ([length (string-length lexeme)]
+           [prime-pos (regexp-match-positions #rx"[']+" lexeme)]
+           [prime-start (if prime-pos (caar prime-pos) length)])
+      (append (subtoken TYPE string->symbol 0 prime-start)
+              (if prime-pos (subtoken 'PRIME string->symbol prime-start length) empty))))
+
+(define-macro-cases subtoken
+  [(subtoken TYPE FN START END) 
+   #'(list (srcloc-token (token TYPE (FN (substring lexeme START END)))
+                         (srcloc 
+                          (srcloc-source lexeme-srcloc)
+                          (srcloc-line lexeme-srcloc)
+                          (+ START (srcloc-column lexeme-srcloc))
+                          (+ START (srcloc-position lexeme-srcloc))
+                          (- END START))))])
 
 (define-macro (strlex (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(lexer-srcloc CUSTOM-RULES ...
@@ -182,10 +192,6 @@
   #'(and (not (equal? eof STR))
          (string-prefix? STR PREFIX)))
 
-(define (lookahead lexer t)
-  (let ([t2 (lexer _ip)])
-    (if (token-struct? (srcloc-token-token t2)) (list t t2) t)))
-
 (define-macro-cases rewind!
   [(rewind! TOKEN)        #'(rewind! 0 TOKEN)]
   [(rewind! #:until STR)  #'(rewind! (string-length STR) (token 'STRING STR))]
@@ -225,6 +231,7 @@
   (println x) x)
 
 (define _ip 'input-port)
+(define _last-token (token null null))
 (define _pending-tokens (list))
 (define _indents (list))
 (define _modestack (list))
@@ -372,20 +379,21 @@
 
 (define (bilang-lexer ip)
   (set! _ip ip)
-  (if (empty? _pending-tokens)
-      (let* ([produce (_mode ip)]
-             [tokens (and (srcloc-token? produce) 
-                          (srcloc-token-token produce))])
-        (cond
-          [(empty? tokens) (bilang-lexer ip)]
-          [(list? tokens)
-           (let ([prods (map (lambda (t)
-                               (if (srcloc-token? t) t
-                                   (srcloc-token t (srcloc-token-srcloc produce))))
-                             tokens)])
-             (set! _pending-tokens (cdr prods))
-             (car prods))]
-          [else produce]))
-      (pop! _pending-tokens)))
+  (set! _last-token (if (empty? _pending-tokens)
+                        (let* ([produce (_mode ip)]
+                               [tokens (and (srcloc-token? produce) 
+                                            (srcloc-token-token produce))])
+                          (cond
+                            [(empty? tokens) (bilang-lexer ip)]
+                            [(list? tokens)
+                             (let ([prods (map (lambda (t)
+                                                 (if (srcloc-token? t) t
+                                                     (srcloc-token t (srcloc-token-srcloc produce))))
+                                               tokens)])
+                               (set! _pending-tokens (cdr prods))
+                               (car prods))]
+                            [else produce]))
+                        (pop! _pending-tokens)))
+  _last-token)
 
 (provide bilang-lexer)
