@@ -49,8 +49,8 @@
    [#\) (token-RPAREN!)]
    [#\{ (token-LBRACE!)]
    [#\} (token-RBRACE!)]
-   [#\[ (token-LSQUARE!)]
-   [#\] (token-RSQUARE!)]
+   [#\[ (token-LBRACKET!)]
+   [#\] (token-RBRACKET!)]
    [#\. (token 'DOT lexeme)]
    [#\, (token 'COMMA lexeme)]
    [#\: (token 'COLON lexeme)]
@@ -156,7 +156,7 @@
                            [#\, (list (token-UNQUOTE!) (token 'UNQUOTE-COMMA lexeme))]
                            [#\( (balanced?! find-endparen)]
                            [#\{ (balanced?! find-endbrace)]
-                           [#\[ (balanced?! find-endsquare)]
+                           [#\[ (balanced?! find-endbracket)]
                            [(:seq #\\ nextloc) (if (>= _dent (measure-dent!))
                                                    (rewind! #:until "\\")
                                                    (unexpected-indent))]
@@ -286,11 +286,11 @@
                               (> _dent _level))
                          (token-STRING (- _dent _level) #\tab)))))
 
-(define (open-bracket! TOKEN)
+(define (open-group! TOKEN)
   (push! _indents _level)
   TOKEN)
 
-(define-macro (close-bracket! TOKEN)
+(define-macro (close-group! TOKEN)
   #'(let ([expected-level (if (empty? _indents)
                               (rr-error "No matching pair")
                               (pop! _indents))])
@@ -300,24 +300,24 @@
           TOKEN)))
 
 (define-macro (token-LPAREN!)
-  #'(open-bracket! (token 'LPAREN "(")))
+  #'(open-group! (token 'LPAREN "(")))
 
 (define-macro (token-RPAREN!)
-  #'(close-bracket! (token 'RPAREN ")")))
+  #'(close-group! (token 'RPAREN ")")))
 
-(define-macro (token-LSQUARE!)
-  #'(open-bracket! (token 'LSQUARE "[")))
+(define-macro (token-LBRACKET!)
+  #'(open-group! (token 'LBRACKET "[")))
 
-(define-macro (token-RSQUARE!)
-  #'(close-bracket! (token 'RSQUARE "]")))
+(define-macro (token-RBRACKET!)
+  #'(close-group! (token 'RBRACKET "]")))
 
 (define (token-LBRACE! [lexer main-lexer])
   (push-mode! lexer)
-  (open-bracket! (token 'LBRACE "{")))
+  (open-group! (token 'LBRACE "{")))
 
 (define-macro token-RBRACE!
   #'(cond [(empty? _modestack) (rr-error "No matching pair")]
-          [else (pop-mode!) (close-bracket! (token 'RBRACE "}"))]))
+          [else (pop-mode!) (close-group! (token 'RBRACE "}"))]))
 
 (define (token-QUOTE! lexer)
   (push-mode! lexer)
@@ -358,16 +358,16 @@
 
 (define find-endparen (find-instr #\)))
 (define find-endbrace (find-instr #\}))
-(define find-endsquare (find-instr #\]))
+(define find-endbracket (find-instr #\]))
 
 (define-macro (find-instr TERMINATOR)
   #'(strlexi (#\( #\) #\{ #\} #\[ #\])
              [#\( (balanced?! find-endparen)]
              [#\{ (balanced?! find-endbrace)]
-             [#\[ (balanced?! find-endsquare)]
+             [#\[ (balanced?! find-endbracket)]
              [TERMINATOR (ok-balanced!)]
-             [(:or #\) #\} #\]) (rr-error "Mismatched bracket")]
-             [(eof) (rr-error "Missing closing bracket")]))
+             [(:or #\) #\} #\]) (rr-error "parenthesis/brace/bracket mismatch")]
+             [(eof) (rr-error "Missing closing parenthesis/brace/bracket")]))
 
 (define-macro (balanced?! LEXER)
   #'(begin (push-mode! LEXER)
