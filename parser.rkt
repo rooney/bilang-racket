@@ -134,7 +134,7 @@ bracket   : /LBRACKET (list|tuple) /RBRACKET
 
 @denty   : dent | blockey
 dent     : /INDENT expr4 /DEDENT
-blockey  : /INDENT kvZ (/LINEFEED+ kvZ)* /feeds? /DEDENT
+blockey  : /INDENT kvZ (/feeds kvZ)* /feeds? /DEDENT
 pseudent : /INDENT pseudent? /DEDENT
 
 @ssc  : exprQ (/SPACE exprQ)*
