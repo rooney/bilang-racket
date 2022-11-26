@@ -21,15 +21,18 @@ expres : /feeds expr4
 @exprK : applyK
        | exprQ
 @exprQ : applyQ
+       | param
        | exprG
 @exprG : applyG
-       | grouping
-       | param
+       | group
+       | groupO
+       | group0
+       | groupD
+       | dot
        | exprO
 @exprO : applyO
        | expr0
 @expr0 : apply0
-       | dot
        | solo
        | e
 
@@ -68,7 +71,7 @@ newlk1 : (newlk|newlk0|newlkO|newlkQ)  /SPACE         exprI
 newlkQ : (newlk|newlk0|newlkO|newlkQ)  /SPACE         kv0                | newlk kv0
 newlkO : (newlk|newlk0              )                 op
        | (             newlkO       )  /SPACE /COMMA  op
-newlk0 : (newlk|newlk0|newlkO       )                (dot|grouping|BIND)
+newlk0 : (newlk|newlk0|newlkO       )                (dot|group|BIND)
 speck3 : (speck|speck0|speckO|speckQ)  /SPACE        (kv3|apply3|comma3) | speck kv3
 speck2 : (speck|speck0|speckO|speckQ) (/SPACE        (kv2|apply2)|denty) | speck kv2
 speckD : (speck|speck0|speckO|speckQ)  /SPACE        (kvD|applyD|commaD) | speck kvD
@@ -77,7 +80,7 @@ speck1 : (speck|speck0|speckO|speckQ)  /SPACE         exprI
 speckQ : (speck|speck0|speckO|speckQ)  /SPACE         kv0                | speck kv0
 speckO : (speck|speck0              )                 op
        | (             speckO       )  /SPACE /COMMA  op
-speck0 : (speck|speck0|speckO       )                (dot|grouping|BIND)
+speck0 : (speck|speck0|speckO       )                (dot|group|BIND)
 comma3 : (comma|comma0|commaO|commaQ)  /SPACE        (kv3|apply3)        | comma kv3
 comma2 : (comma|comma0|commaO|commaQ) (/SPACE        (kv2|apply2)|denty) | comma kv2
 commaD : (comma|comma0|commaO|commaQ)  /SPACE        (kvD|applyD)        | comma kvD
@@ -86,20 +89,23 @@ comma1 : (comma|comma0|commaO|commaQ)  /SPACE         expr1
 commaQ : (comma|comma0|commaO|commaQ)  /SPACE         kv0                | comma kv0
 commaO : (comma|comma0              )                 op
        | (             commaO|applyO)         /COMMA  op
-comma0 : (comma|comma0|commaO       )                (dot|grouping|BIND)
+comma0 : (comma|comma0|commaO       )                (dot|group|BIND)
 
-apply3 : exprK  /SPACE (apply3|kv3)        | (applyG|grouping) kv3
-apply2 : exprK (/SPACE (apply2|kv2)|denty) | (applyG|grouping) kv2
-applyD : exprK  /SPACE (applyD|kvD)        | (applyG|grouping) kvD
-applyI : exprK  /SPACE (applyI|kv1)        | (applyG|grouping) kv1
+apply3 : exprK  /SPACE (apply3|kv3)        | (applyG|group) kv3
+apply2 : exprK (/SPACE (apply2|kv2)|denty) | (applyG|group) kv2
+applyD : exprK  /SPACE (applyD|kvD)        | (applyG|group) kvD
+applyI : exprK  /SPACE (applyI|kv1)        | (applyG|group) kv1
 apply1 : exprK  /SPACE expr1
 applyK : exprQ (/SPACE kv0)+
-applyQ :                                     (applyG|grouping) kv0
-applyG : (exprG|op) grouping               | (applyG|grouping) exprO
+applyQ :                                     (applyG|group) kv0
+group0 :                                     (applyG|group) exprO
+groupO :                                     (applyG|group|groupO|groupD|dot) op
+groupD : (groupD|dot) e                    | (applyG|group|groupO|groupD|dot|op) dot
+applyG : (exprG|op) group
 applyO : exprO op
 apply0 : exprO dot
        | expr0 e
-       | op (e|dot)
+       | op e
 
 nx     : (int|dec) id
 @e     : nx
@@ -112,7 +118,7 @@ int    : INTEGER
 dec    : DECIMAL
 id     : ID PRIME?
 op     : OP PRIME?
-@kv0   : key (exprO|op)
+@kv0   : key (exprG|op)
 @kv1   : key /SPACE (macro1|exprI)
 @kv2   : key /SPACE (macro2|comma2|apply2)
 @kvZ   : key /SPACE (macro1|macro2|expr2)|kvD|kv0
@@ -127,10 +133,10 @@ string : /QUOTE /INDENT (STRING|interp|LINEFEED)* /DEDENT /UNQUOTE
        | /QUOTE         (STRING|interp)*                  /UNQUOTE
 interp : INTERPOLATE (brace|dent)
 
-@grouping : paren | brace | bracket
-paren     : /LPAREN (expr4|@dent /feeds|op) /RPAREN
-brace     : /LBRACE (expr4|@dent /feeds) /RBRACE
-bracket   : /LBRACKET (list|tuple) /RBRACKET
+@group  : paren | brace | bracket
+paren   : /LPAREN (expr4|@dent /feeds|op) /RPAREN
+brace   : /LBRACE (expr4|@dent /feeds) /RBRACE
+bracket : /LBRACKET (list|tuple) /RBRACKET
 
 @denty   : dent | blockey
 dent     : /INDENT expr4 /DEDENT
