@@ -3,17 +3,16 @@
 
 (define-lex-abbrevs
   (digits (:+ (:/ #\0 #\9)))
-  (number (:seq digits (:* (:seq #\_ digits))))
-  (integer (:seq (:? #\-) number))
-  (decimal (:seq integer #\. number))
+  (integer (:seq digits (:* (:seq #\_ digits))))
+  (decimal (:seq integer #\. integer))
   (alpha (:/ #\a #\z #\A #\Z))
   (alnum (:/ #\a #\z #\A #\Z #\0 #\9))
-  (alname (:seq alpha (:* alnum)))
-  (identifier (:seq alname (:* (:seq (:+ (char-set "+/-><")) (:+ alnum))) prime?))
+  (identifier (:seq alpha (:* alnum)))
+  (operator (:+ (char-set "+/-><=*\\~?!&|^#%$@")))
+  (id/op (:or "+" "/" "-" "->" "<-"))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
   (nextloc (:seq (:+ newline) (:* #\tab)))
-  (operator (:seq (:+ (char-set "+*/\\-~=><?!&|^#%$@")) prime?))
   (s-quote #\')
   (d-quote #\")
   (b-quote #\`)
@@ -32,10 +31,11 @@
                 [(= dent _level) (if (> (line-diff) 1) (token 'BLANKLINE lexeme) (token-LINEFEED))]
                 [(< dent _level) (cap-level! dent)]))]
    [spacetabs  (token 'SPACE lexeme)]
-   [identifier (parse-prime 'ID)]
-   [operator   (parse-prime 'OP)]
-   [(:seq integer (:? alname) prime?) (parse-num 'INTEGER)]
-   [(:seq decimal (:? alname) prime?) (parse-num 'DECIMAL)]
+   [(:seq identifier prime?) (parse-prime string->symbol 'ID)]
+   [(:seq id/op      prime?) (parse-prime string->symbol 'OP)]
+   [(:seq operator   prime?) (parse-prime string->symbol 'OPER)]
+   [(:seq integer    prime?) (parse-prime string->number 'INTEGER)]
+   [(:seq decimal    prime?) (parse-prime string->number 'DECIMAL)]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
@@ -59,32 +59,12 @@
               (cap-level! 0) 
               (void))]))
 
-(define-macro (parse-num TYPE)
-  #'(let* ([length (string-length lexeme)]
-           [num-pos (car (regexp-match-positions #rx"[1234567890._]+" lexeme))]
-           [num-end (cdr num-pos)]
-           [prime-pos (regexp-match-positions #rx"[']+" lexeme)]
-           [prime-start (if prime-pos (caar prime-pos) length)])
-      (append (subtoken TYPE (lambda (x) (string->number (string-replace x "_" ""))) 0 num-end)
-              (if (> prime-start num-end) (subtoken 'ID string->symbol num-end prime-start) empty)
-              (if prime-pos (subtoken 'PRIME string->symbol prime-start length) empty))))
-
-(define-macro (parse-prime TYPE)
+(define-macro (parse-prime FN TYPE)
   #'(let* ([length (string-length lexeme)]
            [prime-pos (regexp-match-positions #rx"[']+" lexeme)]
            [prime-start (if prime-pos (caar prime-pos) length)])
-      (append (subtoken TYPE string->symbol 0 prime-start)
+      (append (subtoken TYPE FN 0 prime-start)
               (if prime-pos (subtoken 'PRIME string->symbol prime-start length) empty))))
-
-(define-macro-cases subtoken
-  [(subtoken TYPE FN START END) 
-   #'(list (srcloc-token (token TYPE (FN (substring lexeme START END)))
-                         (srcloc 
-                          (srcloc-source lexeme-srcloc)
-                          (srcloc-line lexeme-srcloc)
-                          (+ START (srcloc-column lexeme-srcloc))
-                          (+ START (srcloc-position lexeme-srcloc))
-                          (- END START))))])
 
 (define-macro (strlex (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(lexer-srcloc CUSTOM-RULES ...
@@ -214,6 +194,9 @@
   [(indentation-error COL) #'(indentation-error COL (- _dent COL) "Too much indentation")]
   [(indentation-error COL LENGTH MSG) #'(rr-error MSG (position-line end-pos) COL 
                                                   (- (position-offset end-pos) LENGTH) LENGTH)])
+
+(define-macro syntax-error
+  #'(rr-error (string-append "Syntax error: " lexeme)))
 
 (define-macro unterminated-string
   #'(rr-error "Unterminated string (missing closing quote)"))
@@ -376,6 +359,16 @@
 (define-macro (ok-balanced!)
   #'(begin (pop-mode!)
            (token 'STRING lexeme)))
+
+(define-macro-cases subtoken
+  [(subtoken TYPE FN START END) 
+   #'(list (srcloc-token (token TYPE (FN (substring lexeme START END)))
+                         (srcloc 
+                          (srcloc-source lexeme-srcloc)
+                          (srcloc-line lexeme-srcloc)
+                          (+ START (srcloc-column lexeme-srcloc))
+                          (+ START (srcloc-position lexeme-srcloc))
+                          (- END START))))])
 
 (define (bilang-lexer ip)
   (set! _ip ip)

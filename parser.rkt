@@ -19,21 +19,19 @@ expres : /feeds expr4
 @expr1 : apply1
        | exprQ
 @exprQ : applyQ
-       | expGQ
-@expGQ : groupQ
-       | param
-       | exprG
-@exprG : applyG
+       | exprC
+@exprC : groupQ
+       | symbol
+       | exprO
+@exprO : applyO
+       | applyG
        | group
        | groupO
        | group0
-       | g-dote
-       | dot
-       | exprO
-@exprO : applyO
        | expr0
 @expr0 : apply0
        | solo
+       | dot
        | e
 
 applyE : exprZ /feeds expr3
@@ -53,7 +51,8 @@ macro3 : mL? macro (/SPACE (mR COMMA? denty|applyD|commaD|kvD) | denty)? /LINEFE
        | mL? macro /SPACE                  (apply3|comma3|kv3)
 
 @comma : (string|commaQ|comma1|applyQ|groupQ|apply1) /UNQUOTE-COMMA
-       | (comma0|commaQ|comma1|applyQ|groupQ|apply1) /COMMA 
+       | (comma0|commaQ|comma1|applyQ|groupQ|apply1) /COMMA
+       | (commaO|expr0)                              /COMMA
 @speck : (speck0|speckO|speckQ|speck1|
           newlk0|newlkO|newlkQ|newlk1|
           newlkK|speckK|commaK|applyK|macro1)        /SPACE /COMMA
@@ -88,62 +87,57 @@ commaK : (comma|comma0|commaO|commaQ)  /SPACE        (kv1|applyK)        | comma
 comma1 : (comma|comma0|commaO|commaQ)  /SPACE         expr1
 commaQ : (comma|comma0|commaO|commaQ)  /SPACE         kv0                | comma kv0
 commaO : (comma|comma0              )                 op
-       | (             commaO|applyO)         /COMMA  op
 comma0 : (comma|comma0|commaO       )                (dot|group|BIND)
+
+commaO2: (comma|       commaO       )                (dot|op)
+commaG : (             commaO|commaG)                 group
 
 apply3 : exprQ  /SPACE (apply3|kv3)        | (applyG|group) kv3
 apply2 : exprQ (/SPACE (apply2|kv2)|denty) | (applyG|group) kv2
 applyD : exprQ  /SPACE (applyD|kvD)        | (applyG|group) kvD
 applyK : exprQ  /SPACE (applyK|kv1)        | (applyG|group) kv1
 apply1 : exprQ  /SPACE expr1
-applyQ : expGQ (/SPACE kv0)+
-applyG : (exprG|op) group
+applyQ : exprC (/SPACE kv0)+
+applyG : (exprO|op) group
 groupQ :                                     (applyG|group) kv0
-group0 :                                     (applyG|group) exprO
-groupO :                                     (applyG|group|groupO|g-dote|dot) op
-g-dote : (g-dote|dot) e                    | (applyG|group|groupO|g-dote|dot|op) dot
-applyO : exprO op
-apply0 : exprO dot
-       | expr0 e
-       | op e
-
-nx     : (int|dec) id
-@e     : nx
-       | int
-       | dec
-       | id
-       | string
+group0 :                                     (applyG|group) expr0
+groupO :                                     (applyG|group|groupO) (op|dot)
+applyO : op (dot|e)
+       | applyO (op|dot)
+apply0 : expr0 (op|dot)
+@e     : ex|int|dec|id
+ex     : (@int|@dec) ID PRIME?
 
 int    : INTEGER
 dec    : DECIMAL
-id     : ID PRIME?
-op     : OP PRIME?
-@kv0   : key (exprG|op)
+id     : ID (OP (INTEGER ID?|ID))* PRIME?
+op     : (OP|OPER) PRIME?
+@kv0   : key (exprC|op)
 @kv1   : key /SPACE (macro1|exprK)
 @kv2   : key /SPACE (macro2|comma2|apply2)
 @kvZ   : key /SPACE (macro1|macro2|expr2)|kvD|kv0
 @kv3   : key /feeds expr3
 @kvD   : key dent
-key    : (int|dec|id|op|dot)+ /COLON
-param  : (/COLON (int|dec|id|op|dot)*)? /COLON id? dot*
-dot    : /DOT (OP? ID op|OP? id|op) BIND?
+key    :         (@int|@dec|@id|@op|@dot)+   /COLON
+symbol : (/COLON (@int|@dec|@id|@op|@dot)*)? /COLON (DOT? (OP|OPER) (PRIME|@id)? | @id)
+dot    :                                            /DOT ((OP|OPER) (PRIME|@id)? | @id) BIND?
 feeds  : /LINEFEED+ | /BLANKLINE
 solo   : /SOLO
-string : /QUOTE /INDENT (STRING|interp|LINEFEED)* /DEDENT /UNQUOTE
-       | /QUOTE         (STRING|interp)*                  /UNQUOTE
-interp : INTERPOLATE (brace|dent)
 
-@group  : paren | brace | bracket
+@group  : paren | brace | bracket | string
 paren   : /LPAREN (expr4|@dent /feeds|op) /RPAREN
 brace   : /LBRACE (expr4|@dent /feeds) /RBRACE
 bracket : /LBRACKET (list|tuple) /RBRACKET
+string  : /QUOTE /INDENT (STRING|interp|LINEFEED)* /DEDENT /UNQUOTE
+        | /QUOTE         (STRING|interp)*                  /UNQUOTE
+interp  : INTERPOLATE (brace|dent)
 
 @denty   : dent | blockey
 dent     : /INDENT expr4 /DEDENT
-blockey  : /INDENT kvZ (/feeds kvZ)* /feeds? /DEDENT
+blockey  : /INDENT kvZ (/feeds kvZ)* /feeds? /DEDENT0
 pseudent : /INDENT pseudent? /DEDENT
 
-@ssc  : expGQ (/SPACE expGQ)*
+@ssc  : exprC (/SPACE exprC)*
 @cs1  : /COMMA /SPACE expr1
 @sz   : /SPACE (macro1|macro2|expr2) 
 tuple : /SPACE? ssc (/feeds ssc)* /SPACE?
