@@ -12,6 +12,10 @@ println "
 "
 ```
 
+n.* factorial n.- 1
+fib n.- 2,.+ fib n.- 1
+fib n- 2,+ fib n- 1
+
 @material.Button
 @(material.Button)
 
