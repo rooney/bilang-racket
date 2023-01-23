@@ -106,12 +106,12 @@ applyO : op (dot|e)
        | applyO (op|dot)
 apply0 : expr0 (op|dot)
 @e     : ex|int|dec|id
-ex     : (@int|@dec) ID PRIME?
+ex     : (@int|@dec) ID
 
 int    : INTEGER
 dec    : DECIMAL
-id     : ID (OP (INTEGER ID?|ID))* PRIME?
-op     : (OP|OPER) PRIME?
+id     : ID | IDENTIFIER
+op     : OP
 @kv0   : key (exprC|op)
 @kv1   : key /SPACE (macro1|exprK)
 @kv2   : key /SPACE (macro2|comma2|apply2)
@@ -119,8 +119,8 @@ op     : (OP|OPER) PRIME?
 @kv3   : key /feeds expr3
 @kvD   : key dent
 key    :         (@int|@dec|@id|@op|@dot)+   /COLON
-symbol : (/COLON (@int|@dec|@id|@op|@dot)*)? /COLON (DOT? (OP|OPER) (PRIME|@id)? | @id)
-dot    :                                            /DOT ((OP|OPER) (PRIME|@id)? | @id) BIND?
+symbol : (/COLON (@int|@dec|@id|@op|@dot)*)? /COLON (DOT? OP @id? | @id)
+dot    :                                            /DOT (OP @id? | @id) BIND?
 feeds  : /LINEFEED+ | /BLANKLINE
 solo   : /SOLO
 
