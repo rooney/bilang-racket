@@ -22,11 +22,9 @@ expres : /feeds expr4
        | exprC
 @exprC : groupQ
        | symbol
-       | exprO
-@exprO : applyO
-       | applyG
+       | exprG
+@exprG : applyG
        | group
-       | groupO
        | group0
        | expr0
 @expr0 : apply0
@@ -98,19 +96,17 @@ applyD : exprQ  /SPACE (applyD|kvD)        | (applyG|group) kvD
 applyK : exprQ  /SPACE (applyK|kv1)        | (applyG|group) kv1
 apply1 : exprQ  /SPACE expr1
 applyQ : exprC (/SPACE kv0)+
-applyG : (exprO|op) group
 groupQ :                                     (applyG|group) kv0
-group0 :                                     (applyG|group) expr0
-groupO :                                     (applyG|group|groupO) (op|dot)
-applyO : op (dot|e)
-       | applyO (op|dot)
-apply0 : expr0 (op|dot)
-@e     : ex|int|dec|id
-ex     : (@int|@dec) ID
+applyG : (op|exprG) group
+group0 :                                     (applyG|group) (expr0|props)
+apply0 : (op|expr0) props
+       | op e
+@e     : nx|int|dec|id
+nx     : (int|dec) ID
 
 int    : INTEGER
 dec    : DECIMAL
-id     : ID | IDENTIFIER
+id     : ID
 op     : OP
 @kv0   : key (exprC|op)
 @kv1   : key /SPACE (macro1|exprK)
@@ -121,7 +117,7 @@ op     : OP
 key    :         (@int|@dec|@id|@op|@dot)+   /COLON
 symbol : (/COLON (@int|@dec|@id|@op|@dot)*)? /COLON (DOT? OP @id? | @id)
 dot    :                                            /DOT (OP @id? | @id) BIND?
-feeds  : /LINEFEED+ | /BLANKLINE
+@props : (dot|op)+
 solo   : /SOLO
 
 @group  : paren | brace | bracket | string
@@ -134,7 +130,7 @@ interp  : INTERPOLATE (brace|dent)
 
 @denty   : dent | blockey
 dent     : /INDENT expr4 /DEDENT
-blockey  : /INDENT kvZ (/feeds kvZ)* /feeds? /DEDENT0
+blockey  : /INDENT kvZ (/feeds kvZ)* /feeds? /DEDENT
 pseudent : /INDENT pseudent? /DEDENT
 
 @ssc  : exprC (/SPACE exprC)*
@@ -145,3 +141,5 @@ tuple : /SPACE? ssc (/feeds ssc)* /SPACE?
 list  : /INDENT (/COMMA (sz|dent) /LINEFEED)* (/COMMA sz)? /DEDENT /LINEFEED
       | /feeds?
       | cs1+ (/LINEFEED cs1+)* /SPACE?
+
+feeds : /LINEFEED+ | /BLANKLINE

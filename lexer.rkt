@@ -3,9 +3,8 @@
 
 (define-lex-abbrevs
   (digits (:+ (:/ #\0 #\9)))
-  (number (:seq digits (:* (:seq #\_ digits))))
-  (integer (:seq (:? #\-) number))
-  (decimal (:seq (:? #\-) number #\. number))
+  (integer (:seq digits (:* (:seq #\_ digits))))
+  (decimal (:seq integer #\. integer))
   (alpha (:/ #\a #\z #\A #\Z))
   (alnum (:/ #\a #\z #\A #\Z #\0 #\9))
   (identifier (:seq alpha (:* alnum) (:* (:seq (:or "+" "/" "-" "<-" "->") (:+ alnum))) prime?))
