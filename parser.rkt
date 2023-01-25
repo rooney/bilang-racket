@@ -10,8 +10,9 @@ expres : /feeds expr4
        | expr2
 @expr2 : apply2|applyD
        | comma2|commaD
-       | speck2|speckD|speckK
-       | speck2|speckD|speckK|speck1|speckQ|speckO|speck0
+       | speck2|speckD
+       | exprL
+@exprL :               speckK|speck1|speckQ|speckO|speck0
        | exprK
 @exprK : applyK
        | commaK|comma1|commaQ|commaO|comma0
@@ -45,6 +46,7 @@ macro  : @op (/SPACE kv0)*
 macro1 : mL  macro
        | mL? macro /SPACE mR
 macro2 : mL? macro (/SPACE (mR COMMA? denty|applyD|commaD|kvD) | denty)
+macroD :     macro (/SPACE (mR COMMA? denty|applyD|commaD|kvD) | denty)
 macro3 : mL? macro (/SPACE (mR COMMA? denty|applyD|commaD|kvD) | denty)? /LINEFEED+ expr3
        | mL? macro /SPACE                  (apply3|comma3|kv3)
 
@@ -91,7 +93,7 @@ commaO2: (comma|       commaO       )                (dot|op)
 commaG : (             commaO|commaG)                 group
 
 apply3 : exprQ  /SPACE (apply3|kv3)        | (applyG|group) kv3
-apply2 : exprQ (/SPACE (apply2|kv2)|denty) | (applyG|group) kv2
+apply2 : exprL denty
 applyD : exprQ  /SPACE (applyD|kvD)        | (applyG|group) kvD
 applyK : exprQ  /SPACE (applyK|kv1)        | (applyG|group) kv1
 apply1 : exprQ  /SPACE expr1
@@ -101,19 +103,19 @@ applyG : (op|exprG) group
 group0 :                                     (applyG|group) (expr0|props)
 apply0 : (op|expr0) props
        | op e
-@e     : nx|int|dec|id
-nx     : (int|dec) ID
+@e     : int|dec|id|nid
+nid    : (int|dec) ID
 
 int    : INTEGER
 dec    : DECIMAL
-id     : ID
+@id    : ID
 op     : OP
 @kv0   : key (exprC|op)
 @kv1   : key /SPACE (macro1|exprK)
 @kv2   : key /SPACE (macro2|comma2|apply2)
 @kvZ   : key /SPACE (macro1|macro2|expr2)|kvD|kv0
 @kv3   : key /feeds expr3
-@kvD   : key dent
+@kvD   : key (/SPACE macroD|dent)
 key    :         (@int|@dec|@id|@op|@dot)+   /COLON
 symbol : (/COLON (@int|@dec|@id|@op|@dot)*)? /COLON (DOT? OP @id? | @id)
 dot    :                                            /DOT (OP @id? | @id) BIND?
