@@ -42,18 +42,17 @@
    [d-quote d-str]
    [b-quote b-str]
    [",," (err (string-append "Unexpected " lexeme))]
-   ["{," (list (token-LBRACE!) (token 'SOLO ''SOLO))]
-   ["()" (token 'BIND ''BIND)]
+   ["{," (list (token-LBRACE!) (token 'SELF ''SELF))]
    [#\( (token-LPAREN!)]
    [#\) (token-RPAREN!)]
    [#\{ (token-LBRACE!)]
    [#\} (token-RBRACE!)]
    [#\[ (token-LBRACKET!)]
    [#\] (token-RBRACKET!)]
-   [#\. (token 'DOT lexeme)]
-   [#\, (token 'COMMA lexeme)]
-   [#\: (token 'COLON lexeme)]
-   [#\; (token 'SEMICOLON lexeme)]
+   [#\. (token 'DOT       (string->symbol lexeme))]
+   [#\, (token 'COMMA     (string->symbol lexeme))]
+   [#\: (token 'COLON     (string->symbol lexeme))]
+   [#\; (token 'SEMICOLON (string->symbol lexeme))]
    [(eof) (if (> _level 0)
               (reset-level! 0) 
               (void))]))
