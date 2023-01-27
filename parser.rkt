@@ -1,12 +1,12 @@
 #lang brag
 
-expres : /feeds expr4
-@expr4 : /SPACE? expr3 /(SPACE|feeds|pseudent)*
-@expr3 : apply3|comma3|speck3|newlk3
+expres : /feeds? expr4
+@expr4 : expr3 /(SPACE|feeds|pseudent)*
+@expr3 : apply3|comma3|speck3|break3
        | applyE|macro3|macro2|macro1
        | exprZ
 @exprZ : applyZ
-       | newlk2|newlkD|newlkK|newlk1|newlkQ|newlkO|newlk0
+       | break2|breakD|breakK|break1|breakQ|breakO|break0
        | expr2
 @expr2 : apply2|applyD
        |        commaD
@@ -39,12 +39,13 @@ applyZ : exprZ /LINEFEED+ kvZ+
 
 macro  : OP (/SPACE kv0)*
 @mR    : (exprK|macro1|kv1)
-@mL    : (exprK|comma |
+@mL    : (exprK|
           speck|speck1|speckQ|speck0|
-          newlk|newlk1|newlkQ|newlkO|newlk0) /SPACE
+          break|break1|breakQ|breakO|break0) /SPACE
 
 macro1 : mL  macro
        | mL? macro /SPACE mR
+macroL :     macro /SPACE mR
 macro2 : mL? macro (/SPACE (mR COMMA? denty|applyD|commaD|kvD) | denty)
 macroD :     macro (/SPACE (mR COMMA? denty|applyD|commaD|kvD) | denty)
 macro3 : mL? macro (/SPACE (mR COMMA? denty|applyD|commaD|kvD) | denty)? /LINEFEED+ expr3
@@ -52,21 +53,21 @@ macro3 : mL? macro (/SPACE (mR COMMA? denty|applyD|commaD|kvD) | denty)? /LINEFE
 
 @comma : exprK                 /COMMA
 @speck : (exprL|macro1) /SPACE /COMMA
-@block : (newlk2|              apply2|macro2|
-          newlkD|speckD|commaD|applyD|applyZ)        /LINEFEED+ /COMMA
-@newlk :               (macro1|macro2|exprZ)         /LINEFEED+ /COMMA
+@block : (break2|              apply2|macro2|
+          breakD|speckD|commaD|applyD|applyZ)        /LINEFEED+ /COMMA
+@break :               (macro1|macro2|exprZ)         /LINEFEED+ /COMMA
 
-newlk3 : (newlk|newlk0|newlkO|newlkQ)  /SPACE        (kv3|apply3|comma3) | newlk kv3
-newlk2 : (block                     )                                      denty
-       | (      newlk0|newlkO|newlkQ) (/SPACE        (kv2|apply2)        | denty)
-       | (newlk                     )  /SPACE        (kv2|apply2)        | newlk kv2
-newlkD : (newlk|newlk0|newlkO|newlkQ)  /SPACE        (kvD|applyD|commaD) | newlk kvD
-newlkK : (newlk|newlk0|newlkO|newlkQ)  /SPACE        (kv1|applyK|commaK) | newlk kv1
-newlk1 : (newlk|newlk0|newlkO|newlkQ)  /SPACE         exprK
-newlkQ : (newlk|newlk0|newlkO|newlkQ)  /SPACE         kv0                | newlk kv0
-newlkO : (newlk|newlk0              )                 OP
-       | (             newlkO       )  /SPACE /COMMA  OP
-newlk0 : (newlk|newlk0|newlkO       )                (dot|group|BIND)
+break3 : (break|break0|breakO|breakQ)  /SPACE        (kv3|apply3|comma3) | break kv3
+break2 : (block                     )                                      denty
+       | (      break0|breakO|breakQ) (/SPACE        (kv2|apply2)        | denty)
+       | (break                     )  /SPACE        (kv2|apply2)        | break kv2
+breakD : (break|break0|breakO|breakQ)  /SPACE        (kvD|applyD|commaD) | break kvD
+breakK : (break|break0|breakO|breakQ)  /SPACE        (kv1|applyK|commaK) | break kv1
+break1 : (break|break0|breakO|breakQ)  /SPACE         exprK
+breakQ : (break|break0|breakO|breakQ)  /SPACE         kv0                | break kv0
+breakO : (break|break0              )                 OP
+       | (             breakO       )  /SPACE /COMMA  OP
+break0 : (break|break0|breakO       )                (dot|group|BIND)
 
 speck3 : (speck|speck0|speckQ)  /SPACE (kv3|apply3|comma3) | speck kv3
 speckD : (speck|speck0|speckQ)  /SPACE (kvD|applyD|commaD) | speck kvD
@@ -99,13 +100,13 @@ timed  : (int|dec) ID
 int    : INTEGER
 dec    : DECIMAL
 @kv0   : key (exprC|OP)
-@kv1   : key /SPACE (macro1|exprK)
+@kv1   : key /SPACE (macroL|exprK)
 @kv2   : key /SPACE (macro2|apply2)
 @kvZ   : key /SPACE (macro1|macro2|expr2)|kvD|kv0
 @kv3   : key /feeds expr3
 @kvD   : key (/SPACE macroD|dent)
 key    :         (@int|@dec|OP|ID|DOT)+   /COLON
-symbol : (/COLON (@int|@dec|OP|ID|DOT)*)? /COLON OP? ID? (dot|op)*
+symbol : (/COLON (@int|@dec|OP|ID|DOT)*)? /COLON OP? ID? (dot|OP)*
 dot    : /DOT (OP|OP? ID)
 prop   : @dot bind?
 props  : (@prop|OP)+
@@ -113,8 +114,8 @@ bind   : /LPAREN /SPACE? kv0? (/SPACE kv0)* kv1? /SPACE? /RPAREN
 self   : /SELF
 
 @group  : paren | brace | bracket | string
-@paren  : /LPAREN (expr4|@dent /feeds|OP) /RPAREN
-brace   : /LBRACE (expr4|@dent /feeds) /RBRACE
+@paren  : /LPAREN (/SPACE? expr4|@dent /feeds|OP) /RPAREN
+brace   : /LBRACE (/SPACE? expr4|@dent /feeds) /RBRACE
 bracket : /LBRACKET (list|tuple) /RBRACKET
 string  : /QUOTE /INDENT (STRING|interp|LINEFEED)* /DEDENT /UNQUOTE
         | /QUOTE         (STRING|interp)*                  /UNQUOTE
