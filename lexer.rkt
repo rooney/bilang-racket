@@ -26,7 +26,7 @@
    [nextloc (let ([next-level (add1 _level)]
                   [dent (measure-dent!)])
               (cond
-                [(> dent next-level) (err-on-indentation next-level)]
+                [(> dent next-level) (error-on-indentation next-level)]
                 [(= dent next-level) (indent!)]
                 [(= dent _level) (if (> (line-diff) 1) (token 'BLANKLINE lexeme) (token-LINEFEED))]
                 [(< dent _level) (reset-level! dent)]))]
@@ -38,21 +38,21 @@
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
+   [(:seq #\{ spacetabs? #\,) (list (token-LBRACE!) (token 'SELF ''SELF))]
    [s-quote s-str]
    [d-quote d-str]
    [b-quote b-str]
-   [",," (err (string-append "Unexpected " lexeme))]
-   ["{," (list (token-LBRACE!) (token 'SELF ''SELF))]
    [#\( (token-LPAREN!)]
    [#\) (token-RPAREN!)]
    [#\{ (token-LBRACE!)]
    [#\} (token-RBRACE!)]
    [#\[ (token-LBRACKET!)]
    [#\] (token-RBRACKET!)]
-   [#\. (token 'DOT       (string->symbol lexeme))]
-   [#\, (token 'COMMA     (string->symbol lexeme))]
-   [#\: (token 'COLON     (string->symbol lexeme))]
-   [#\; (token 'SEMICOLON (string->symbol lexeme))]
+   [#\. (token 'DOT       ''DOT)]
+   [#\, (token 'COMMA     ''COMMA)]
+   [#\: (token 'COLON     ''COLON)]
+   [#\; (token 'SEMICOLON ''SEMICOLON)]
+   [(:+ (char-set ",;")) (error (string-append "Unexpected " lexeme))]
    [(eof) (if (> _level 0)
               (reset-level! 0) 
               (void))]))
@@ -60,7 +60,8 @@
 (define shortid-lexer
   (lexer-srcloc
    [shortid  (begin (pop-mode!) (token 'ID (string->symbol lexeme)))]
-   [any-char (begin (pop-mode!) (rewind! empty))]))
+   [any-char (begin (pop-mode!) (rewind! empty))]
+   [(eof)    (begin (pop-mode!) empty)]))
 
 (define-macro (str-lexer (CUSTOM-CHARS ...) CUSTOM-RULES ...)
   #'(lexer-srcloc CUSTOM-RULES ...
@@ -72,7 +73,7 @@
                [(:seq "`{" spacetabs? "}") (token 'STRING "")]
                [(:seq "`{" spacetabs?) (list (token 'INTERPOLATE 0) (token-LBRACE!))]
                [(:seq "`{" nextloc "}") (escape-newline)]
-               [(:seq "`{" nextloc) (str-interp (token-LBRACE!) #:dent-or (err-on-indentation))]
+               [(:seq "`{" nextloc) (str-interp (token-LBRACE!) #:dent-or (error-on-indentation))]
                CUSTOM-RULES ...))
 
 (define-macro (str-interp TOKENS ... #:dent-or NODENT)
@@ -85,7 +86,7 @@
                                          (set! _level current-dent)
                                          (list token-INTERPOLATE TOKENS ... (indent!))))]
         [(< new-dent next-dent) NODENT]
-        [(> new-dent next-dent) (err-on-indentation next-dent)])))
+        [(> new-dent next-dent) (error-on-indentation next-dent)])))
 
 (define-macro s-str
   #'(token-QUOTE! (str-lexer ()
@@ -96,9 +97,9 @@
 (define-macro d-str
   #'(token-QUOTE! (str-lexi (d-quote)
                             [d-quote (token-UNQUOTE!)]
-                            [newline-char (err-unterminated-string)]
-                            [(:seq #\` nextloc) (str-interp #:dent-or (err-unterminated-string))]
-                            [(eof) (err-unterminated-string)])))
+                            [newline-char (error-unterminated-string)]
+                            [(:seq #\` nextloc) (str-interp #:dent-or (error-unterminated-string))]
+                            [(eof) (error-unterminated-string)])))
 
 (define-macro b-str
   #'(token-QUOTE! (str-lexi (#\( #\) #\{ #\} #\[ #\] #\, #\space #\tab)
@@ -127,9 +128,9 @@
 
 (define-macro d-block
   #'(append (list (token-QUOTE! (lexer-srcloc [d-quote (token-UNQUOTE!)]
-                                              [any-char (err-unterminated-string)]
-                                              [(eof) (err-unterminated-string)]))
-                  (indent! (blockstr-lexi [(eof) (err-unterminated-string)])))
+                                              [any-char (error-unterminated-string)]
+                                              [(eof) (error-unterminated-string)]))
+                  (indent! (blockstr-lexi [(eof) (error-unterminated-string)])))
             (-1LF (extract-whites!))))
 
 (define-macro b-block
@@ -156,25 +157,25 @@
                                                        (+ (position-col start-pos) EATLEN) newpos)                                 
                               TOKEN)])
 
-(define-macro-cases err
-  [(err MSG LINE COL OFFSET LENGTH) #'(raise-read-error MSG (file-path) LINE COL OFFSET LENGTH)]
-  [(err MSG) #'(err MSG
+(define-macro-cases error
+  [(error MSG LINE COL OFFSET LENGTH) #'(raise-read-error MSG (file-path) LINE COL OFFSET LENGTH)]
+  [(error MSG) #'(error MSG
                     (position-line start-pos)
                     (position-col start-pos)
                     (position-offset start-pos)
                     (if (string? lexeme) (string-length lexeme) 0))])
 
-(define-macro-cases err-on-indentation
-  [(err-on-indentation)     #'(err-on-indentation 1 _dent "Insufficient indentation")]
-  [(err-on-indentation COL) #'(err-on-indentation COL (- _dent COL) "Too much indentation")]
-  [(err-on-indentation COL LENGTH MSG) #'(err MSG (position-line end-pos) COL 
+(define-macro-cases error-on-indentation
+  [(error-on-indentation)     #'(error-on-indentation 1 _dent "Insufficient indentation")]
+  [(error-on-indentation COL) #'(error-on-indentation COL (- _dent COL) "Too much indentation")]
+  [(error-on-indentation COL LENGTH MSG) #'(error MSG (position-line end-pos) COL 
                                               (- (position-offset end-pos) LENGTH) LENGTH)])
 
-(define-macro err-on-syntax
-  #'(err (string-append "Syntax error: " lexeme)))
+(define-macro error-on-syntax
+  #'(error (string-append "Syntax erroror: " lexeme)))
 
-(define-macro err-unterminated-string
-  #'(err "Unterminated string (missing closing quote)"))
+(define-macro error-unterminated-string
+  #'(error "Unterminated string (missing closing quote)"))
 
 (define (debug x)
   (println x) x)
@@ -240,7 +241,7 @@
 
 (define-macro (close-group! TOKEN)
   #'(let ([expected-level (if (empty? _indents)
-                              (err "No matching pair")
+                              (error "No matching pair")
                               (pop! _indents))])
       (if (> _level expected-level)
           (append (reset-level! expected-level)
@@ -264,7 +265,7 @@
   (open-group! (token 'LBRACE "{")))
 
 (define-macro token-RBRACE!
-  #'(cond [(empty? _modestack) (err "No matching pair")]
+  #'(cond [(empty? _modestack) (error "No matching pair")]
           [else (pop-mode!) (close-group! (token 'RBRACE "}"))]))
 
 (define (token-QUOTE! lexer)
@@ -300,9 +301,9 @@
   #'(let ([current-dent _dent]
           [new-dent (sub1 (measure-dent!))])
       (cond
-        [(< new-dent current-dent) (err-on-indentation)]
+        [(< new-dent current-dent) (error-on-indentation)]
         [(= new-dent current-dent) (token 'STRING "")]
-        [(> new-dent current-dent) (err-on-indentation current-dent)])))
+        [(> new-dent current-dent) (error-on-indentation current-dent)])))
 
 (define find-endparen (look-for #\)))
 (define find-endbrace (look-for #\}))
@@ -314,8 +315,8 @@
               [#\{ (check-if-balanced find-endbrace)]
               [#\[ (check-if-balanced find-endbracket)]
               [TERMINATOR (ok-balanced)]
-              [(:or #\) #\} #\]) (err "parenthesis/brace/bracket mismatch")]
-              [(eof) (err "Missing closing parenthesis/brace/bracket")]))
+              [(:or #\) #\} #\]) (error "parenthesis/brace/bracket mismatch")]
+              [(eof) (error "Missing closing parenthesis/brace/bracket")]))
 
 (define-macro (check-if-balanced LEXER)
   #'(begin (push-mode! LEXER)
