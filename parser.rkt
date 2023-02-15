@@ -51,7 +51,7 @@ macroD :     macro (/SPACE (mR denty |applyD|commaD|kvD) | denty)
 macro3 : mL? macro (/SPACE (mR denty?|applyD|commaD|kvD) | denty)? /LINEFEED expr3
        | mL? macro /SPACE            (apply3|comma3|kv3)
 
-@comma : exprK          /SPACE? /COMMA
+@comma : (expr1|commaQ|comma0|comma1) /SPACE? /COMMA
 @semic : (exprL|macro1) /SPACE? /SEMICOLON
 @dents : (break2|              apply2|macro2|
           breakD|semicD|commaD|applyD|applyZ)    /LINEFEED /COMMA
