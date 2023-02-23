@@ -35,10 +35,12 @@
    [identifier (token 'ID (string->symbol lexeme))]
    [integer    (begin (push-mode! shortid-lexer) (token 'INTEGER (string->number lexeme)))]
    [decimal    (begin (push-mode! shortid-lexer) (token 'DECIMAL (string->number lexeme)))]
+   [".." (token 'DOT-DOT ''DOT-DOT)]
+   [",," (error (string-append "Unexpected " lexeme))]
+   ["{," (list (token-LBRACE!) (token 'THIS ''THIS))]
    [(:seq s-quote nextloc) s-block]
    [(:seq d-quote nextloc) d-block]
    [(:seq b-quote nextloc) b-block]
-   [(:seq #\{ spacetabs? #\,) (list (token-LBRACE!) (token 'SELF ''SELF))]
    [s-quote s-str]
    [d-quote d-str]
    [b-quote b-str]
@@ -52,7 +54,6 @@
    [#\, (token 'COMMA     ''COMMA)]
    [#\: (token 'COLON     ''COLON)]
    [#\; (token 'SEMICOLON ''SEMICOLON)]
-   [(:+ (char-set ",;")) (error (string-append "Unexpected " lexeme))]
    [(eof) (if (> _level 0)
               (reset-level! 0) 
               (void))]))
