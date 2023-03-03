@@ -12,7 +12,8 @@
   (operator (:+ (char-set "+/-><=*\\~?!&|^#%$@")))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
-  (nextloc (:seq (:+ newline) (:* #\tab)))
+  (nextlox (:seq (:+ newline) (:* #\tab)))
+  (nextloc (:seq     newline  (:* #\tab)))
   (s-quote #\')
   (d-quote #\")
   (b-quote #\`)
@@ -28,7 +29,7 @@
               (cond
                 [(> dent next-level) (error-on-indentation next-level)]
                 [(= dent next-level) (indent!)]
-                [(= dent _level) (if (> (line-diff) 1) (token 'BLANKLINE lexeme) (token-LINEFEED))]
+                [(= dent _level) (token-NEWLINE)]
                 [(< dent _level) (reset-level! dent)]))]
    [spacetabs  (token 'SPACE lexeme)]
    [operator   (token 'OP (string->symbol lexeme))]
@@ -38,9 +39,9 @@
    [".." (token 'DOT-DOT ''DOT-DOT)]
    [",," (error (string-append "Unexpected " lexeme))]
    ["{," (list (token-LBRACE!) (token 'THIS ''THIS))]
-   [(:seq s-quote nextloc) s-block]
-   [(:seq d-quote nextloc) d-block]
-   [(:seq b-quote nextloc) b-block]
+   [(:seq s-quote nextlox) s-block]
+   [(:seq d-quote nextlox) d-block]
+   [(:seq b-quote nextlox) b-block]
    [s-quote s-str]
    [d-quote d-str]
    [b-quote b-str]
@@ -115,7 +116,7 @@
 (define-macro (blockstr STR-LEXER CUSTOM-RULES ...)
   #'(STR-LEXER ()
                CUSTOM-RULES ...
-               [nextloc (extract-whites!)]))
+               [nextlox (extract-whites!)]))
 
 (define-macro (blockstr-lexi CUSTOM-RULES ...)
   #'(blockstr str-lexi
@@ -161,16 +162,16 @@
 (define-macro-cases error
   [(error MSG LINE COL OFFSET LENGTH) #'(raise-read-error MSG (file-path) LINE COL OFFSET LENGTH)]
   [(error MSG) #'(error MSG
-                    (position-line start-pos)
-                    (position-col start-pos)
-                    (position-offset start-pos)
-                    (if (string? lexeme) (string-length lexeme) 0))])
+                        (position-line start-pos)
+                        (position-col start-pos)
+                        (position-offset start-pos)
+                        (if (string? lexeme) (string-length lexeme) 0))])
 
 (define-macro-cases error-on-indentation
   [(error-on-indentation)     #'(error-on-indentation 1 _dent "Insufficient indentation")]
   [(error-on-indentation COL) #'(error-on-indentation COL (- _dent COL) "Too much indentation")]
   [(error-on-indentation COL LENGTH MSG) #'(error MSG (position-line end-pos) COL 
-                                              (- (position-offset end-pos) LENGTH) LENGTH)])
+                                                  (- (position-offset end-pos) LENGTH) LENGTH)])
 
 (define-macro error-on-syntax
   #'(error (string-append "Syntax erroror: " lexeme)))
@@ -181,8 +182,6 @@
 (define (debug x)
   (println x) x)
 
-(define _ip 'input-port)
-(define _last-token (token null null))
 (define _pending-tokens (list))
 (define _indents (list))
 (define _modestack (list))
@@ -213,11 +212,10 @@
   (set! _level (sub1 _level))
   (pop-mode!)
   (append (list (token 'DEDENT _mode))
-          (concat-if (equal? _mode dedent->unquote) (dedent->unquote))))
+          (append-if (equal? _mode dedent->unquote) (dedent->unquote))))
 
 (define dedent->unquote 
-  (lambda () (list (token-UNQUOTE!) 
-                   (token-LINEFEED))))
+  (lambda () (token-UNQUOTE!)))
 
 (define-macro (measure-dent!)
   #'(begin (set! _dent (string-length (last (string-split lexeme "\n" #:trim? #f))))
@@ -229,9 +227,9 @@
                      (set! dedents (append dedents (dedent!))))]
            [num-feed (if (empty? dedents) numLF (sub1 numLF))])
       (append (concat-if (> num-feed 0)
-                         (make-list num-feed (token-LINEFEED)))
+                         (make-list num-feed (token-NEWLINE)))
               dedents
-              (append-if (equal? _mode main-lexer) (token-LINEFEED))
+              (append-if (equal? _mode main-lexer) (token-NEWLINE))
               (append-if (and (> _level 0)
                               (> _dent _level))
                          (token-STRING (- _dent _level) #\tab)))))
@@ -280,8 +278,8 @@
 (define (token-STRING count char)
   (token 'STRING (make-string count char)))
 
-(define (token-LINEFEED)
-  (token 'LINEFEED "\n"))
+(define (token-NEWLINE)
+  (token 'NEWLINE "\n"))
 
 (define-macro line-diff
   #'(- (position-line end-pos) (position-line start-pos)))
@@ -292,7 +290,7 @@
 
 (define-macro -1LF
   #'(let ([whites extract-whites!])
-      (if (equal? 'LINEFEED (token-struct-type (car whites)))
+      (if (equal? 'NEWLINE (token-struct-type (car whites)))
           (cdr whites) whites)))
 
 (define-macro extract-whites!
@@ -327,33 +325,21 @@
   #'(begin (pop-mode!)
            (token 'STRING lexeme)))
 
-(define-macro-cases subtoken
-  [(subtoken TYPE FN START END) 
-   #'(list (srcloc-token (token TYPE (FN (substring lexeme START END)))
-                         (srcloc 
-                          (srcloc-source lexeme-srcloc)
-                          (srcloc-line lexeme-srcloc)
-                          (+ START (srcloc-column lexeme-srcloc))
-                          (+ START (srcloc-position lexeme-srcloc))
-                          (- END START))))])
-
 (define (bilang-lexer ip)
-  (set! _ip ip)
-  (set! _last-token (if (empty? _pending-tokens)
-                        (let* ([produce (_mode ip)]
-                               [tokens (and (srcloc-token? produce) 
-                                            (srcloc-token-token produce))])
-                          (cond
-                            [(empty? tokens) (bilang-lexer ip)]
-                            [(list? tokens)
-                             (let ([prods (map (lambda (t)
-                                                 (if (srcloc-token? t) t
-                                                     (srcloc-token t (srcloc-token-srcloc produce))))
-                                               tokens)])
-                               (set! _pending-tokens (cdr prods))
-                               (car prods))]
-                            [else produce]))
-                        (pop! _pending-tokens)))
-  _last-token)
+  (if (empty? _pending-tokens)
+      (let* ([produce (_mode ip)]
+             [tokens (and (srcloc-token? produce) 
+                          (srcloc-token-token produce))])
+        (cond
+          [(empty? tokens) (bilang-lexer ip)]
+          [(list? tokens)
+           (let ([prods (map (lambda (t)
+                               (if (srcloc-token? t) t
+                                   (srcloc-token t (srcloc-token-srcloc produce))))
+                             tokens)])
+             (set! _pending-tokens (cdr prods))
+             (car prods))]
+          [else produce]))
+      (pop! _pending-tokens)))
 
 (provide bilang-lexer)
