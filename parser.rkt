@@ -4,10 +4,10 @@ expres : /feeds? expr4
 @expr4 : expr3 /(SPACE|feeds)?
 @expr3 : applyE|macroE|macroZ|macroL
        | exprZ
-@exprZ : applyB
+@exprZ : apply2|comma2|cont2
+       | applyB
        | applyN
        | comma|cont
-       | cont2|comma2|apply2
        | contL|contR|cont1|contQ|contO
        | exprK
 @exprK : commaL|commaR|comma1|commaQ|commaO
@@ -24,12 +24,12 @@ expres : /feeds? expr4
        | this|dot|bind
        | e
 
-applyE : exprZ /feeds expr3
+applyE : exprZ /NEWLINE /feeds break block
+       | exprZ /feeds expr3
 applyN : exprZ nkey+
-applyB : (expr1|applyR
-         |contQ|contO|cont|close
-         |commaQ|commaO|comma) block
-breakB : break block
+applyB : (expr1|applyR|
+          contQ|contO|cont|close|
+          commaQ|commaO|comma) block
 
 @macro : OP (/SPACE k0 (/SPACE? /COMMA)?)*
 @m1    : expr1 /SPACE
@@ -93,6 +93,7 @@ bind   : @dot @self
 @prop  : bind|dot|op
 self   : /LPAREN /RPAREN
 this   : /THIS
+feeds  : /NEWLINE+
 
 @grouping : @paren | brace | bracket
 paren     : /LPAREN (/SPACE? expr4|@dent /feeds|OP) /RPAREN
@@ -104,6 +105,5 @@ interp    : INTERPOLATE (brace|dent)
 
 dent     : /INDENT expr4 /DEDENT
 keyblock : /INDENT kB nkey* /feeds? /DEDENT
-@block   : dent | keyblock
 
-feeds : /NEWLINE+
+@block   : dent | keyblock
