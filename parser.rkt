@@ -2,15 +2,13 @@
 
 expres : /feeds? expr4
 @expr4 : expr3 /(SPACE|feeds)?
-@expr3 : applyE|macroE|macroZ|macroL
-       | exprZ
-@exprZ : apply2|comma2|cont2
-       | applyB
-       | applyN
+@expr3 : apply3|macro3|macro2|macro1
+       | expr2
+@expr2 : apply2|applyZ|commaZ|contZ
        | comma|cont
-       | contL|contR|cont1|contQ|contO
+       | contK|cont1|contQ|contO
        | exprK
-@exprK : commaL|commaR|comma1|commaQ|commaO
+@exprK : commaK|comma1|commaQ|commaO
        | applyL|applyR
        | expr1
 @expr1 : apply1
@@ -24,46 +22,40 @@ expres : /feeds? expr4
        | this|dot|bind
        | e
 
-applyE : exprZ /NEWLINE /feeds break block
-       | exprZ /feeds expr3
-applyN : exprZ nkey+
-applyB : (expr1|applyR|
-          contQ|contO|cont|close|
-          commaQ|commaO|comma) block
-
 @macro : OP (/SPACE k0 (/SPACE? /COMMA)?)*
-@m1    : expr1 /SPACE
-@mL    : (expr1|comma1|commaQ|commaO|comma|cont1|contQ|contO|cont|close|break) /SPACE
-@mR    : /SPACE (macro1|exprK|kL)
-@m2    : /SPACE (apply2|comma2|k2)
-@m3    : (mR|m2)? (nkey+|nkey* /feeds expr3)
+@m1    : (expr1|comma1|commaQ|commaO|comma|cont1|contQ|contO|cont|close|break) /SPACE
+@mL    : expr1 /SPACE
+@mR    : /SPACE (exprK|macroL|kL)
+@mZ    : /SPACE (applyZ|commaZ|kZ)
+@m3    : (mR|mZ)? (nkey+|nkey* /feeds expr3)
 macro1 : m1? @macroR | m1 macro
 macroL : mL? @macroR | mL macro
 macroR :     macro mR
-macro2 : m1? macro m2
-macroZ : mL? macro m2
-macroE : mL? macro m3
+macroZ : mL? macro mZ
+macro2 : m1? macro mZ
+macro3 : m1? macro m3
 
-@break : (exprK|contO|contQ|cont1|macroL)           /NEWLINE /COMMA
-@close : (apply2|comma2|cont2|applyB|applyN|macroZ) /NEWLINE /COMMA
-@cont  : (contO|contQ|cont1)                        /SPACE?  /COMMA
-@comma : (expr1|commaO|commaQ|comma1)               /SPACE?  /COMMA
+@break : (exprK|contO|contQ|cont1|macro1)    /NEWLINE /COMMA
+@close : (applyZ|commaZ|contZ|apply2|macro2) /NEWLINE /COMMA
+@cont  : (contO|contQ|cont1)                 /SPACE?  /COMMA
+@comma : (expr1|commaO|commaQ|comma1)        /SPACE?  /COMMA
 
-cont2  : (break|close|cont|contO|contQ) /SPACE (apply2|k2)
-contL  : (break|close|cont|contO|contQ) /SPACE (applyL|kL)
-contR  : (break|close|cont|contO|contQ) /SPACE (applyR|kR)
-cont1  : (break|close|cont|contO|contQ) /SPACE  expr1
-contQ  : (break|close|cont|contO)      (/SPACE         k0)+
+contZ  : (break|close|cont|contO|contQ) /SPACE (applyZ|kZ)
+contK  : (break|close|cont|contO|contQ) /SPACE (applyL|applyR|kL|kR)
+cont1  : (break|close|cont|contO|contQ) /SPACE expr1
+contQ  : (break|close|cont|contO)      (/SPACE k0)+
 contO  : (break|close|cont) ops
 
-comma2 : (comma|commaO|commaQ) /SPACE (apply2|k2)
-commaL : (comma|commaO|commaQ) /SPACE (applyL|kL)
-commaR : (comma|commaO|commaQ) /SPACE (applyR|kR)
-comma1 : (comma|commaO|commaQ) /SPACE  expr1
-commaQ : (comma|commaO)       (/SPACE         k0)+
+commaZ : (comma|commaO|commaQ) /SPACE (applyZ|kZ)
+commaK : (comma|commaO|commaQ) /SPACE (applyL|applyR|kL|kR)
+comma1 : (comma|commaO|commaQ) /SPACE expr1
+commaQ : (comma|commaO)       (/SPACE k0)+
 commaO :  comma ops
 
-apply2 : exprQ /SPACE (apply2|k2)
+apply3 : expr2 (/NEWLINE /feeds break block)? /feeds expr3
+apply2 : expr2 nkey+
+       | (expr1|applyR|commaQ|commaO|contQ|contO|comma|cont|close) block
+applyZ : exprQ /SPACE (applyZ|kZ)
 applyL : exprQ /SPACE (applyL|kL)
 applyR : exprQ /SPACE (applyR|kR)
 apply1 : exprQ (/SPACE expr1)+
@@ -80,10 +72,10 @@ op     : OP
 @int   : INTEGER
 @dec   : DECIMAL
 @k0    : key expr0
-@kL    : key  /SPACE (applyL|macro1|expr1)
+@kL    : key  /SPACE (applyL|macroL|expr1)
 @kR    : key  /SPACE (applyR|macroR)
-@k2    : key (/SPACE (macro2|apply2)|dent)
-@kB    : k2|kL|kR block?
+@kZ    : key (/SPACE (applyZ|macroZ)|dent)
+@kB    : kZ|kL|kR block?
 nkey   : /feeds kB
 key    :         (DOT|OP|ID|@int|@dec)+   /COLON
 atom   : (/COLON (DOT|OP|ID|@int|@dec)*)? /COLON OP? ID (dot|OP)*
@@ -103,7 +95,6 @@ string    : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
           | /QUOTE         (STRING|interp)*                  /UNQUOTE
 interp    : INTERPOLATE (brace|dent)
 
-dent     : /INDENT expr4 /DEDENT
+@block   : keyblock | dent
 keyblock : /INDENT kB nkey* /feeds? /DEDENT
-
-@block   : dent | keyblock
+dent     : /INDENT expr4 /DEDENT
