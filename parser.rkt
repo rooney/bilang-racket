@@ -76,6 +76,7 @@ op     : OP
 @kR    : key  /SPACE (applyR|macroR)
 @kZ    : key (/SPACE (applyZ|macroZ)|dent)
 @kB    : kZ|kL|kR block?
+xkey   : k0|kB
 nkey   : /feeds kB
 key    :         (DOT|OP|ID|@int|@dec)+   /COLON
 atom   : (/COLON (DOT|OP|ID|@int|@dec)*)? /COLON OP? ID (dot|OP)*
@@ -88,8 +89,8 @@ this   : /THIS
 feeds  : /NEWLINE+
 
 @grouping : @paren | brace | bracket
-paren     : /LPAREN (/SPACE? expr2 /SPACE?|@dent /feeds|OP) /RPAREN
-brace     : /LBRACE (/SPACE? expr2 /SPACE?|@dent /feeds)    /RBRACE
+paren     : /LPAREN (/SPACE? (expr2|xkey) /SPACE?|@dent /feeds|OP) /RPAREN
+brace     : /LBRACE (/SPACE? (expr2|xkey) /SPACE?|@dent /feeds|OP) /RBRACE
 bracket   : /LBRACKET /RBRACKET
 string    : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
           | /QUOTE         (STRING|interp)*                 /UNQUOTE
