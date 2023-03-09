@@ -3,10 +3,10 @@
 expres : /feeds? expr4
 @expr4 : expr3 /(SPACE|feeds)?
 @expr3 : apply3|macro3|macro2|macro1
+       | exprZ
+@exprZ : contZ|contK|cont1|contQ|contO|cont
        | expr2
-@expr2 : apply2|applyZ|commaZ|contZ
-       | comma|cont
-       | contK|cont1|contQ|contO
+@expr2 : apply2|applyZ|commaZ|comma
        | exprK
 @exprK : commaK|comma1|commaQ|commaO
        | applyL|applyR
@@ -88,11 +88,11 @@ this   : /THIS
 feeds  : /NEWLINE+
 
 @grouping : @paren | brace | bracket
-paren     : /LPAREN (/SPACE? expr4|@dent /feeds|OP) /RPAREN
-brace     : /LBRACE (/SPACE? expr4|@dent /feeds) /RBRACE
+paren     : /LPAREN (/SPACE? expr2 /SPACE?|@dent /feeds|OP) /RPAREN
+brace     : /LBRACE (/SPACE? expr2 /SPACE?|@dent /feeds)    /RBRACE
 bracket   : /LBRACKET /RBRACKET
 string    : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
-          | /QUOTE         (STRING|interp)*                  /UNQUOTE
+          | /QUOTE         (STRING|interp)*                 /UNQUOTE
 interp    : INTERPOLATE (brace|dent)
 
 @block   : keyblock | dent
