@@ -92,9 +92,9 @@ feeds  : /NEWLINE+
           | @dentz /feeds
           | OP
 @grouping : @paren | brace | bracket
-paren     : /LPAREN   grouped /RPAREN
-brace     : /LBRACE   grouped /RBRACE
-bracket   : /LBRACKET grouped /RBRACKET
+paren     : /LPAREN grouped /RPAREN
+brace     : /LBRACE grouped /RBRACE
+bracket   : /SQUARE grouped /ENDSQR
 string    : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
           | /QUOTE         (STRING|interp)*                 /UNQUOTE
 interp    : INTERPOLATE (brace|dentz)
