@@ -79,11 +79,11 @@ op     : OP
        | kL | kR block? 
 nkey   : /feeds kx
 key    :         (DOT|OP|ID|@int|@dec)+   /COLON
-atom   : (/COLON (DOT|OP|ID|@int|@dec)*)? /COLON ID dot*
+atom   : (/COLON (DOT|OP|ID|@int|@dec)*)? /COLON (ID dot*)?
 dot    : /DOT (OP|OP? ID|paren)
 bind   : @dot @self
-@ops   : self|self? (@paren|prop)+
-@prop  : bind|dot|op
+@ops   : self | self? (@paren|prop)+
+@prop  : bind | dot | op
 self   : /LPAREN /RPAREN
 this   : /THIS
 feeds  : /NEWLINE+
@@ -94,7 +94,7 @@ feeds  : /NEWLINE+
 @grouping : @paren | brace | bracket
 paren     : /LPAREN grouped /RPAREN
 brace     : /LBRACE grouped /RBRACE
-bracket   : /SQUARE grouped /ENDSQR
+bracket   : /LBRACK grouped /RBRACK
 string    : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
           | /QUOTE         (STRING|interp)*                 /UNQUOTE
 interp    : INTERPOLATE (brace|dentz)
