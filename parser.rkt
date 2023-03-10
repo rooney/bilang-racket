@@ -89,8 +89,8 @@ this   : /THIS
 feeds  : /NEWLINE+
 
 @grouping : @paren | brace | bracket
-paren     : /LPAREN (/SPACE? (expr2|xkey) /SPACE?|@dent /feeds|OP) /RPAREN
-brace     : /LBRACE (/SPACE? (expr2|xkey) /SPACE?|@dent /feeds|OP) /RBRACE
+paren     : /LPAREN (/SPACE? (macro1|macro2|expr2|xkey) /SPACE?|@dent /feeds|OP) /RPAREN
+brace     : /LBRACE (/SPACE? (macro1|macro2|expr2|xkey) /SPACE?|@dent /feeds|OP) /RBRACE
 bracket   : /LBRACKET /RBRACKET
 string    : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
           | /QUOTE         (STRING|interp)*                 /UNQUOTE
