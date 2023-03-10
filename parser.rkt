@@ -3,8 +3,7 @@
 expres : /feeds? expr4
 @expr4 : expr3 /(SPACE|feeds)?
 @expr3 : apply3|macro3|macro2|macro1
-       | exprZ
-@exprZ : comboZ|comboK|combo1|comboQ|comboO|combo
+       | comboZ|comboK|combo1|comboQ|comboO|combo
        | expr2
 @expr2 : apply2|applyZ|commaZ|comma
        | exprK
@@ -72,12 +71,13 @@ op     : OP
 @int   : INTEGER
 @dec   : DECIMAL
 @k0    : key expr0
-@kL    : key  /SPACE (applyL|macroL|expr1)
-@kR    : key  /SPACE (applyR|macroR)
-@kZ    : key (/SPACE (applyZ|macroZ)|dent)
-@kB    : kZ|kL|kR block?
-xkey   : k0|kB
-nkey   : /feeds kB
+@kL    : key /SPACE (applyL|macroL|expr1)
+@kR    : key /SPACE (applyR|macroR)
+@kZ    : key /SPACE (applyZ|macroZ)
+       | key dentz
+@kx    : kZ | k0 (/SPACE k0)*
+       | kL | kR block? 
+nkey   : /feeds kx
 key    :         (DOT|OP|ID|@int|@dec)+   /COLON
 atom   : (/COLON (DOT|OP|ID|@int|@dec)*)? /COLON OP? ID (dot|OP)*
 dot    : /DOT (OP|OP? ID|paren)
@@ -88,14 +88,17 @@ self   : /LPAREN /RPAREN
 this   : /THIS
 feeds  : /NEWLINE+
 
+@grouped  : /SPACE? expr4 /SPACE?
+          | @dentz /feeds
+          | OP
 @grouping : @paren | brace | bracket
-paren     : /LPAREN (/SPACE? (macro1|macro2|expr2|xkey) /SPACE?|@dent /feeds|OP) /RPAREN
-brace     : /LBRACE (/SPACE? (macro1|macro2|expr2|xkey) /SPACE?|@dent /feeds|OP) /RBRACE
-bracket   : /LBRACKET /RBRACKET
+paren     : /LPAREN   grouped /RPAREN
+brace     : /LBRACE   grouped /RBRACE
+bracket   : /LBRACKET grouped /RBRACKET
 string    : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
           | /QUOTE         (STRING|interp)*                 /UNQUOTE
-interp    : INTERPOLATE (brace|dent)
+interp    : INTERPOLATE (brace|dentz)
 
-@block   : keyblock | dent
-keyblock : /INDENT kB nkey* /feeds? /DEDENT
-dent     : /INDENT expr4 /DEDENT
+@block   : keyblock | dentz
+keyblock : /INDENT kx nkey* /feeds? /DEDENT
+dentz    : /INDENT expr4 /DEDENT
