@@ -79,7 +79,7 @@ op     : OP
        | kL | kR block? 
 nkey   : /feeds kx
 key    :         (DOT|OP|ID|@int|@dec)+   /COLON
-atom   : (/COLON (DOT|OP|ID|@int|@dec)*)? /COLON OP? ID (dot|OP)*
+atom   : (/COLON (DOT|OP|ID|@int|@dec)*)? /COLON ID dot*
 dot    : /DOT (OP|OP? ID|paren)
 bind   : @dot @self
 @ops   : self|self? (@paren|prop)+
