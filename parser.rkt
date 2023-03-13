@@ -87,17 +87,17 @@ bind   : @dot @self
 self   : /LPAREN /RPAREN
 this   : /THIS
 feeds  : /NEWLINE+
+string : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
+       | /QUOTE         (STRING|interp)*                 /UNQUOTE
+interp : INTERPOLATE (brace|dentz)
 
+@grouping : @paren | brace | bracket
+paren     : /LPAREN grouped  /RPAREN
+brace     : /LBRACE grouped  /RBRACE
+bracket   : /LBRACK grouped? /RBRACK
 @grouped  : /SPACE? expr4 /SPACE?
           | @dentz /feeds
           | OP
-@grouping : @paren | brace | bracket
-paren     : /LPAREN grouped /RPAREN
-brace     : /LBRACE grouped /RBRACE
-bracket   : /LBRACK grouped /RBRACK
-string    : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
-          | /QUOTE         (STRING|interp)*                 /UNQUOTE
-interp    : INTERPOLATE (brace|dentz)
 
 @block   : keyblock | dentz
 keyblock : /INDENT kx nkey* /feeds? /DEDENT
