@@ -2,8 +2,10 @@
 
 expres : /feeds? expr4
 @expr4 : expr3 /(SPACE|feeds)?
-@expr3 : apply3|macro3|macro2|macro1
-       | contiZ|contiK|conti1|contiQ|contiO|conti
+@expr3 : apply3|macro3|combo
+       | exprZ
+@exprZ : comboZ|comboK|comboQ|comboO|combo1
+       | macro2|macro1
        | expr2
 @expr2 : apply2|applyZ|commaZ|comma
        | exprK
@@ -22,7 +24,7 @@ expres : /feeds? expr4
        | e
 
 @macro : OP (/SPACE k0 (/SPACE? /COMMA)?)*
-@m1    : (expr1|comma1|commaQ|commaO|comma|conti1|contiQ|contiO|conti|close|combi) /SPACE
+@m1    : (expr1|comma1|commaQ|commaO|comma|combo1|comboQ|comboO|combo) /SPACE
 @mL    : expr1 /SPACE
 @mR    : /SPACE (exprK|macroL|kL)
 @mZ    : /SPACE (applyZ|commaZ|kZ)
@@ -34,16 +36,15 @@ macroZ : mL? macro mZ
 macro2 : m1? macro mZ
 macro3 : m1? macro m3
 
-@comma : (expr1|commaO|commaQ|comma1)         /SPACE?  /COMMA
-@conti : (contiO|contiQ|conti1)               /SPACE?  /COMMA
-@combi : (exprK|contiO|contiQ|conti1|macro1)  /NEWLINE /COMMA
-@close : (applyZ|commaZ|contiZ|apply2|macro2) /NEWLINE /COMMA
+@comma : (commaO|commaQ|comma1|expr1) /SPACE? /COMMA
+@combo : (comboO|comboQ|combo1)       /SPACE? /COMMA
+       | exprZ                        /NEWLINE /COMMA
 
-contiZ : (combi|close|conti|contiO|contiQ) /SPACE (applyZ|kZ)
-contiK : (combi|close|conti|contiO|contiQ) /SPACE (applyL|applyR|kL|kR)
-conti1 : (combi|close|conti|contiO|contiQ) /SPACE expr1
-contiQ : (combi|close|conti|contiO)      (/SPACE k0)+
-contiO : (combi|close|conti) ops
+comboZ : (combo|comboO|comboQ) /SPACE (applyZ|kZ)
+comboK : (combo|comboO|comboQ) /SPACE (applyL|applyR|kL|kR)
+combo1 : (combo|comboO|comboQ) /SPACE expr1
+comboQ : (combo|comboO)       (/SPACE k0)+
+comboO :  combo ops
 
 commaZ : (comma|commaO|commaQ) /SPACE (applyZ|kZ)
 commaK : (comma|commaO|commaQ) /SPACE (applyL|applyR|kL|kR)
@@ -51,9 +52,9 @@ comma1 : (comma|commaO|commaQ) /SPACE expr1
 commaQ : (comma|commaO)       (/SPACE k0)+
 commaO :  comma ops
 
-apply3 : expr2 (/NEWLINE /feeds combi block)? /feeds expr3
+apply3 : expr2 /feeds expr3
 apply2 : expr2 nkey+
-       | (expr1|applyR|commaQ|commaO|contiQ|contiO|comma|conti|close) block
+       | (expr1|applyR|commaQ|commaO|comboQ|comboO|comma|combo) block
 applyZ : exprQ /SPACE (applyZ|kZ)
 applyL : exprQ /SPACE (applyL|kL)
 applyR : exprQ /SPACE (applyR|kR)
