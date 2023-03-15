@@ -98,7 +98,7 @@ brace     : /LBRACE grouped  /RBRACE
 bracket   : /LBRACK grouped? /RBRACK
 @grouped  : /SPACE? expr4 /SPACE?
           | @dentz /feeds
-          | OP
+          | key | k0 | OP
 
 @block   : keyblock | dentz
 keyblock : /INDENT kx nkey* /feeds? /DEDENT
