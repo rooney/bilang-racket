@@ -9,7 +9,7 @@
   (alnum (:/ #\a #\z #\A #\Z #\0 #\9))
   (identifier (:seq alpha (:* alnum) (:* (:seq (:or "+" "/" "-" "<-" "->") (:+ alnum))) prime?))
   (shortid    (:seq alpha (:* alnum)                                                    prime?))
-  (operator (:+ (char-set "+/-><=*\\~?!&|^#%$@")))
+  (operator (:+ (char-set "+/-><=*\\~?!&|^#%$@_;")))
   (newline-char (char-set "\r\n"))
   (newline (:seq (:? spacetabs) (:or "\r\n" "\n")))
   (nextlox (:seq (:+ newline) (:* #\tab)))
