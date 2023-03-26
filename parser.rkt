@@ -15,12 +15,13 @@ expres : /feeds? expr4
 @expr1 : apply1
        | exprQ
 @exprQ : applyQ
+       | spread
        | expr0
 @expr0 : apply0
-       | atom
+       | atom|bottom
        | exprG
 @exprG : applyG|grouping
-       | this|dot|bind
+       | this|dot
        | e
 
 @macro : OP (/SPACE k0 (/SPACE? /COMMA)?)*
@@ -44,13 +45,13 @@ comboZ : (combo|comboO|comboQ) /SPACE (applyZ|kZ)
 comboK : (combo|comboO|comboQ) /SPACE (applyL|applyR|kL|kR)
 combo1 : (combo|comboO|comboQ) /SPACE expr1
 comboQ : (combo|comboO)       (/SPACE k0)+
-comboO :  combo ops
+comboO :  combo               (dot|op|grouping)+
 
 commaZ : (comma|commaO|commaQ) /SPACE (applyZ|kZ)
 commaK : (comma|commaO|commaQ) /SPACE (applyL|applyR|kL|kR)
 comma1 : (comma|commaO|commaQ) /SPACE expr1
 commaQ : (comma|commaO)       (/SPACE k0)+
-commaO :  comma ops
+commaO :  comma               (dot|op|grouping)+
 
 apply3 : expr2 /feeds expr3
 apply2 : expr2 nkey+
@@ -58,48 +59,49 @@ apply2 : expr2 nkey+
 applyZ : exprQ /SPACE (applyZ|kZ)
 applyL : exprQ /SPACE (applyL|kL)
 applyR : exprQ /SPACE (applyR|kR)
-apply1 : exprQ (/SPACE expr1)+
+apply1 : exprQ /SPACE expr1
 applyQ : expr0 (/SPACE k0)+
 apply0 : (applyG|grouping) e
-       | (exprG|op) prop+
+       | (exprG|op) (dot|op)+
 applyG : (expr0|op) grouping+
-apply  : (times|ID|op) (int|dec|ID|times+)
-parse  : (times|ID|op|apply) string
-times  : (int|dec) ID
-@e     : times|parse|apply|string|int|dec|ID
+apply  : (times|id|op) (int|dec|id|times+)
+parse  : (times|id|op|apply) string
+times  : (int|dec) id
+@e     : times|parse|apply|string|int|dec|id
 
 op     : OP
+id     : ID
 @int   : INTEGER
 @dec   : DECIMAL
 @k0    : key expr0
 @kL    : key /SPACE (applyL|macroL|expr1)
 @kR    : key /SPACE (applyR|macroR)
 @kZ    : key /SPACE (applyZ|macroZ)
-       | key dentz
+       | key zdent
 @kx    : kZ | k0 (/SPACE k0)*
        | kL | kR block? 
 nkey   : /feeds kx
-key    :         (DOT|OP|ID|@int|@dec)+   /COLON
-atom   : (/COLON (DOT|OP|ID|@int|@dec)*)? /COLON (ID dot*)?
-dot    : /DOT (OP|OP? ID|paren)
-bind   : @dot @self
-@ops   : self | self? (@paren|prop)+
-@prop  : bind | dot | op
-self   : /LPAREN /RPAREN
+key    :         (DOT|OP|id|@int|@dec)+   /COLON
+atom   : (/COLON (DOT|OP|id|@int|@dec)*)? /COLON (id dot*)?
+dot    : /DOT (OP|OP? id|grouping)
 this   : /THIS
 feeds  : /NEWLINE+
 string : /QUOTE /INDENT (STRING|interp|NEWLINE)* /DEDENT /UNQUOTE
        | /QUOTE         (STRING|interp)*                 /UNQUOTE
-interp : INTERPOLATE (brace|dentz)
+interp : INTERPOLATE (brace|zdent)
 
-@grouping : @paren | brace | bracket
-paren     : /LPAREN grouped  /RPAREN
-brace     : /LBRACE grouped  /RBRACE
+@grouping : @paren | bracket | brace | generator
+paren     : /LPAREN grouped? /RPAREN
 bracket   : /LBRACK grouped? /RBRACK
+brace     : /LBRACE grouped? /RBRACE
+bottom    : /LBRACE /SPREAD                      /RBRACE
+generator : /LBRACE /SPREAD /SPACE expr4 /SPACE? /RBRACE
+          | /LBRACE /SPREAD (id | @zdent /feeds) /RBRACE
 @grouped  : /SPACE? expr4 /SPACE?
-          | @dentz /feeds
-          | key | k0 | OP
+          | @zdent /feeds
+          | key|k0|OP
+spread    : /SPREAD (id|grouped)
 
-@block   : keyblock | dentz
+@block   : keyblock | zdent
 keyblock : /INDENT kx nkey* /feeds? /DEDENT
-dentz    : /INDENT expr4 /DEDENT
+zdent    : /INDENT expr4 /DEDENT

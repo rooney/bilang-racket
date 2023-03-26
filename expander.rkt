@@ -27,8 +27,7 @@
 (define-macro-cases apply0
   [(apply0 E (dot . PROP)) #'`(prop PROP ,E)]
   [(apply0 E E2)           #'`(,E ,E2)]
-  [(apply0 E (id X ... Z)) #'`(disambiguate ,E ,(if (op? 'Z) 'A 'B))]
-  )
+  [(apply0 E (id X ... Z)) #'`(disambiguate ,E ,(if (op? 'Z) 'A 'B))])
 
 (define-macro (dot . PROP)
   #''(prop PROP this))
@@ -50,7 +49,10 @@
 (define-macro (op OP) #''OP)
 
 (define-macro-cases apply1
-  [(apply1 E E2)           #'(append `(E) `(,E2))])
+  [(apply1 E E2)           #'(append `(,E) `(,E2))])
+
+(define-macro-cases comma1
+  [(comma1 E E2)           #'(append `(,E) `(,E2))])
 
 (define-macro (braces X)
   #'`(quote ,X))
@@ -65,3 +67,4 @@
 
 (provide atom num string paren braces dot op id)
 (provide applyJ j apply1 applyG apply0 applyO kv0)
+(provide comma1)
