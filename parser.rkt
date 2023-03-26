@@ -104,4 +104,4 @@ spread    : /SPREAD (id|grouped)
 
 @block   : keyblock | zdent
 keyblock : /INDENT kx nkey* /feeds? /DEDENT
-zdent    : /INDENT expr4 /DEDENT
+zdent    : /INDENT /feeds? expr4 /DEDENT
