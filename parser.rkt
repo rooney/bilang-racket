@@ -85,7 +85,7 @@ dec    : DECIMAL
 @kx    : kZ | k0 (/SPACE k0)*
        | kL | kR block? 
 nkey   : /feeds kx
-key    : (OP|ID|INTEGER|DECIMAL)+ | idx
+key    : idx | (OP|ID|INTEGER|DECIMAL)+
 atom   : (COLON @key?)? COLON @idx?
 prop   : /DOT (OP|OP? @id|grouping)
 this   : /THIS
